@@ -1,0 +1,58 @@
+{
+  "tabs": {
+    "home": "Home",
+    "chats": "Chats",
+    "settings": "Settings"
+  },
+  "login": {
+    "title": "Welcome to My App",
+    "signIn": "Log in with Google",
+    "signingIn": "Signing in..."
+  },
+  "completeProfile": {
+    "title": "Complete Your Profile",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Enter your display name",
+    "username": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "avatarUrl": "Avatar URL (optional)",
+    "avatarUrlPlaceholder": "Enter your avatar URL",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "error": {
+      "requiredFields": "Display name and username are required",
+      "usernameTaken": "Username is already taken",
+      "generic": "Failed to complete profile"
+    }
+  },
+  "home": {
+    "welcome": "Welcome, {{name}}!",
+    "signOut": "Log out",
+    "noUser": "No user signed in"
+  },
+  "chats": {
+    "title": "Chats",
+    "placeholder": "This is the Chats screen"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "english": "English",
+    "vietnamese": "Vietnamese"
+  },
+  "error": {
+    "title": "Error",
+    "generic": "An error occurred",
+    "signOut": "Failed to sign out",
+    "changeLanguage": "Failed to change language",
+    "noOAuthUrl": "No OAuth URL returned",
+    "oauthError": "OAuth error",
+    "noAccessToken": "No access token received",
+    "oauthCanceled": "OAuth flow canceled or failed",
+    "signIn": "Failed to sign in",
+    "initializeSession": "Failed to initialize session",
+    "getSession": "Failed to get session",
+    "studentEmailRequired": "Student email is required"
+  },
+  "loading": "Loading..."
+}

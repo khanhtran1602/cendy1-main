@@ -1,0 +1,59 @@
+{
+  "tabs": {
+    "home": "Trang chủ",
+    "chats": "Trò chuyện",
+    "settings": "Cài đặt"
+  },
+  "login": {
+    "title": "Chào mừng đến với ứng dụng của tôi",
+    "login": "Đăng nhập với",
+    "signIn": "Đăng nhập bằng Google",
+    "signingIn": "Đang đăng nhập..."
+  },
+  "completeProfile": {
+    "title": "Hoàn thiện hồ sơ của bạn",
+    "displayName": "Tên hiển thị",
+    "displayNamePlaceholder": "Nhập tên hiển thị của bạn",
+    "username": "Tên người dùng",
+    "usernamePlaceholder": "Nhập tên người dùng của bạn",
+    "avatarUrl": "URL ảnh đại diện (tùy chọn)",
+    "avatarUrlPlaceholder": "Nhập URL ảnh đại diện của bạn",
+    "submit": "Gửi",
+    "submitting": "Đang gửi...",
+    "error": {
+      "requiredFields": "Tên hiển thị và tên người dùng là bắt buộc",
+      "usernameTaken": "Tên người dùng đã được sử dụng",
+      "generic": "Không thể hoàn thiện hồ sơ"
+    }
+  },
+  "home": {
+    "welcome": "Chào mừng, {{name}}!",
+    "signOut": "Đăng xuất",
+    "noUser": "Không có người dùng để đăng nhập"
+  },
+  "chats": {
+    "title": "Trò chuyện",
+    "placeholder": "Đây là màn hình Trò chuyện"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "language": "Ngôn ngữ",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  },
+  "error": {
+    "title": "Lỗi",
+    "generic": "Đã xảy ra lỗi",
+    "signOut": "Đăng xuất thất bại",
+    "changeLanguage": "Thay đổi ngôn ngữ thất bại",
+    "noOAuthUrl": "Không nhận được URL OAuth",
+    "oauthError": "Lỗi OAuth",
+    "noAccessToken": "Không nhận được mã truy cập",
+    "oauthCanceled": "Quy trình OAuth bị hủy hoặc thất bại",
+    "signIn": "Đăng nhập thất bại",
+    "initializeSession": "Khởi tạo phiên thất bại",
+    "getSession": "Lấy phiên thất bại",
+    "studentEmailRequired": "Email sinh viên là bắt buộc"
+  },
+  "loading": "Đang tải..."
+}
