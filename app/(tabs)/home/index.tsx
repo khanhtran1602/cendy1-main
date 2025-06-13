@@ -1,9 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../stores/authStore';
 
 export default function HomeScreen() {
@@ -11,35 +9,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  // Check profile completion status
-  const { data: needsCompletion, isLoading: isChecking } = useQuery({
-    queryKey: ['profileCompletion', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('check_profile_completion');
-      if (error) throw error;
-      return data as boolean;
-    },
-    enabled: !!session,
-  });
-
   // Log component mount and state
   useEffect(() => {
     const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
     console.log(`[${timestamp}] [HomeScreen] Component mounted`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null, authLoading });
   }, []);
 
-  // Redirect based on session and profile completion
+  // Redirect to login if no session
   useEffect(() => {
     if (!session && !authLoading) {
       const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
       console.log(`[${timestamp}] [HomeScreen] No session, redirecting to /login`);
       router.replace('/(auth)/login');
-    } else if (session && needsCompletion && !isChecking) {
-      const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-      console.log(`[${timestamp}] [HomeScreen] Profile incomplete, redirecting to /profile-completion`);
-      router.replace('/(auth)/profile-completion');
     }
-  }, [session, authLoading, needsCompletion, isChecking]);
+  }, [session, authLoading]);
 
   // Handle errors
   useEffect(() => {
@@ -62,7 +45,7 @@ export default function HomeScreen() {
     }
   };
 
-  if (isChecking || authLoading) {
+  if (authLoading) {
     return <Text>{t('loading')}</Text>;
   }
 
@@ -87,10 +70,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 80,
+    padding: 20,
   },
   welcome: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
   },
