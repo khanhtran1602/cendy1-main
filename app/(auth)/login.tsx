@@ -6,6 +6,12 @@ import { Alert, Button, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 
+// Helper to log with timestamp
+const log = (message: string, data?: any) => {
+  const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  console.log(`[${timestamp}] [LoginScreen] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+};
+
 export default function LoginScreen() {
   const { session, loading, error, signInWithGoogle } = useAuthStore();
   const router = useRouter();
@@ -15,6 +21,7 @@ export default function LoginScreen() {
   const { data: needsCompletion, isLoading: isChecking } = useQuery({
     queryKey: ['profileCompletion', session?.user?.id],
     queryFn: async () => {
+      log('Calling database function: check_profile_completion');
       const { data, error } = await supabase.rpc('check_profile_completion');
       if (error) throw error;
       return data as boolean;
@@ -24,25 +31,21 @@ export default function LoginScreen() {
 
   // Log component mount and state
   useEffect(() => {
-    const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-    console.log(`[${timestamp}] [LoginScreen] Component mounted`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null, loading });
+    log('Component mounted', { session: session ? { userId: session.user?.id, email: session.user?.email } : null, loading });
   }, []);
 
   // Redirect based on session and profile completion
   useEffect(() => {
     if (session && !isChecking) {
-      const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-      const destination = needsCompletion ? '/(auth)/profile-completion' : '/(tabs)/home';
-      console.log(`[${timestamp}] [LoginScreen] Redirecting to ${destination}`, { userId: session.user?.id, email: session.user?.email });
-      router.replace(destination);
+      log(`Redirecting to ${needsCompletion ? '/(auth)/profile-completion' : '/(tabs)/home'}`, { userId: session.user?.id, email: session.user?.email });
+      router.replace(needsCompletion ? '/(auth)/profile-completion' : '/(tabs)/home');
     }
   }, [session, needsCompletion, isChecking]);
 
   // Handle errors
   useEffect(() => {
     if (error) {
-      const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-      console.log(`[${timestamp}] [LoginScreen] Error occurred`, { error: error.message });
+      log('Error occurred', { error: error.message });
       Alert.alert(t('error.title'), error.message || t('error.generic'));
     }
   }, [error]);
@@ -53,8 +56,7 @@ export default function LoginScreen() {
       <Button
         title={loading ? t('login.signingIn') : t('login.signIn')}
         onPress={() => {
-          const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-          console.log(`[${timestamp}] [LoginScreen] Sign-in button pressed`);
+          log('Sign-in button pressed');
           signInWithGoogle();
         }}
         disabled={loading}

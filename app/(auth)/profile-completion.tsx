@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -32,17 +32,6 @@ export default function ProfileCompletionScreen() {
     },
   });
 
-  // Check profile completion status
-  const { data: needsCompletion, isLoading: isChecking } = useQuery({
-    queryKey: ['profileCompletion', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('check_profile_completion');
-      if (error) throw error;
-      return data as boolean;
-    },
-    enabled: !!session,
-  });
-
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
@@ -55,13 +44,13 @@ export default function ProfileCompletionScreen() {
     },
     onSuccess: async () => {
       // Re-check profile completion
-      const { data: isComplete, error } = await supabase.rpc('check_profile_completion');
+      const { data: NeedComplete, error } = await supabase.rpc('check_profile_completion');
       if (error) {
         Alert.alert(t('error.title'), error.message || t('error.generic'));
         return;
       }
-      if (isComplete === false) {
-        // Invalidate query to refresh needsCompletion
+      if (NeedComplete === false) {
+        // Invalidate query to refresh needsCompletion in other screens
         await queryClient.invalidateQueries({ queryKey: ['profileCompletion', user?.id] });
         router.replace('/(tabs)/home');
       } else {
@@ -73,22 +62,16 @@ export default function ProfileCompletionScreen() {
     },
   });
 
-  // Redirect if profile is complete
+  // Redirect if no session
   useEffect(() => {
     if (!session) {
       router.replace('/(auth)/login');
-    } else if (needsCompletion === false && !isChecking) {
-      router.replace('/(tabs)/home');
     }
-  }, [session, needsCompletion, isChecking]);
+  }, [session]);
 
   const onSubmit = (data: ProfileFormData) => {
     updateProfileMutation.mutate(data);
   };
-
-  if (isChecking) {
-    return <Text>{t('loading')}</Text>;
-  }
 
   return (
     <View style={styles.container}>
