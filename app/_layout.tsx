@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,9 +11,18 @@ const queryClient = new QueryClient();
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  
+  useEffect(() => {
+    console.log(`[${timestamp}] [RootLayout] Rendering with pathname: ${pathname}`);
+  }, [pathname]);
+
   // Clean up Supabase subscriptions on unmount
   useEffect(() => {
+    console.log(`[${timestamp}] [RootLayout] Mounting component`);
     return () => {
+      console.log(`[${timestamp}] [RootLayout] Unmounting, cleaning up auth subscription`);
       supabase.auth.onAuthStateChange(() => {}).data.subscription.unsubscribe();
     };
   }, []);
@@ -23,7 +32,8 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="profile-completion" options={{ headerShown: false }} />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

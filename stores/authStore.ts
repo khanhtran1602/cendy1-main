@@ -28,10 +28,13 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => {
   const { t } = useTranslation();
+  const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+
   const log = (message: string, data?: any) => {
-    const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
     console.log(`[${timestamp}] [AuthStore] ${message}`, data ? JSON.stringify(data, null, 2) : '');
   };
+
+  console.log(`[${timestamp}] [AuthStore] Initializing store`);
 
   return {
     session: null,
@@ -43,18 +46,24 @@ export const useAuthStore = create<AuthState>((set) => {
       log('Initializing session');
       try {
         set({ loading: true, error: null });
-        log('Calling database function: auth.getSession');
+        console.log(`[${timestamp}] [AuthStore] Calling auth.getSession`);
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        log('Initial session retrieved', { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
+        if (error) {
+          console.log(`[${timestamp}] [AuthStore] getSession error`, { error: error.message });
+          throw error;
+        }
+        console.log(`[${timestamp}] [AuthStore] Initial session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
         if (session) {
-          await useUserSettingsStore.getState().fetchUserInfo(); // Fetch college/settings
+          console.log(`[${timestamp}] [AuthStore] Fetching user info for session`);
+          await useUserSettingsStore.getState().fetchUserInfo();
           set({ session, user: session.user, loading: false, error: null });
+          console.log(`[${timestamp}] [AuthStore] Session and user set`, { userId: session.user?.id });
         } else {
           set({ session: null, user: null, profile: null, loading: false });
+          console.log(`[${timestamp}] [AuthStore] No session, cleared state`);
         }
       } catch (err) {
-        log('Error initializing session', err);
+        console.log(`[${timestamp}] [AuthStore] Error initializing session`, { error: err instanceof Error ? err.message : 'Unknown error' });
         set({ loading: false, error: err instanceof Error ? err : new Error(t('error.initializeSession')) });
       }
     },
@@ -62,57 +71,65 @@ export const useAuthStore = create<AuthState>((set) => {
       log('Starting Google Sign-In');
       try {
         set({ loading: true, error: null });
+        console.log(`[${timestamp}] [AuthStore] Generating redirect URL`);
         const redirectUrl = makeRedirectUri({ scheme: 'cendy', path: 'auth' });
-        log('Generated redirect URL', { redirectUrl });
+        console.log(`[${timestamp}] [AuthStore] Generated redirect URL`, { redirectUrl });
+        console.log(`[${timestamp}] [AuthStore] Calling auth.signInWithOAuth`);
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
         });
         if (error) {
-          log('OAuth initiation error', error);
+          console.log(`[${timestamp}] [AuthStore] OAuth initiation error`, { error: error.message });
           if (error.message.includes('Please sign in with a student email address')) {
             throw new Error(t('error.invalidDomain'));
           }
           throw error;
         }
         if (!data.url) {
-          log('No OAuth URL returned');
+          console.log(`[${timestamp}] [AuthStore] No OAuth URL returned`);
           throw new Error(t('error.noOAuthUrl'));
         }
-        log('OAuth URL generated', { url: data.url });
+        console.log(`[${timestamp}] [AuthStore] OAuth URL generated`, { url: data.url });
+        console.log(`[${timestamp}] [AuthStore] Opening auth session`);
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-        log('OAuth browser result', { type: result.type });
+        console.log(`[${timestamp}] [AuthStore] OAuth browser result`, { type: result.type });
         if (result.type === 'success') {
           const { params, errorCode } = QueryParams.getQueryParams(result.url);
-          log('Redirect URL params', { params, errorCode });
-          if (errorCode) throw new Error(`${t('error.oauthError')}: ${errorCode}`);
+          console.log(`[${timestamp}] [AuthStore] Redirect URL params`, { params, errorCode });
+          if (errorCode) {
+            console.log(`[${timestamp}] [AuthStore] OAuth error code`, { errorCode });
+            throw new Error(`${t('error.oauthError')}: ${errorCode}`);
+          }
           const { access_token, refresh_token } = params;
           if (!access_token) {
-            log('No access token in redirect');
+            console.log(`[${timestamp}] [AuthStore] No access token in redirect`);
             throw new Error(t('error.noAccessToken'));
           }
-          log('Access token received', { access_token: access_token.slice(0, 10) + '...' });
-          log('Calling database function: auth.setSession', { access_token: access_token.slice(0, 10) + '...' });
+          console.log(`[${timestamp}] [AuthStore] Access token received`, { access_token: access_token.slice(0, 10) + '...' });
+          console.log(`[${timestamp}] [AuthStore] Calling auth.setSession`, { access_token: access_token.slice(0, 10) + '...' });
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token,
             refresh_token,
           });
           if (sessionError) {
-            log('Session set error', sessionError);
+            console.log(`[${timestamp}] [AuthStore] Session set error`, { error: sessionError.message });
             if (sessionError.message.includes('Please sign in with a student email address')) {
               throw new Error(t('error.invalidDomain'));
             }
             throw sessionError;
           }
-          log('Session set successfully', { userId: sessionData.session?.user?.id, email: sessionData.session?.user?.email });
-          await useUserSettingsStore.getState().fetchUserInfo(); // Fetch college/settings
+          console.log(`[${timestamp}] [AuthStore] Session set successfully`, { userId: sessionData.session?.user?.id, email: sessionData.session?.user?.email });
+          console.log(`[${timestamp}] [AuthStore] Fetching user info after sign-in`);
+          await useUserSettingsStore.getState().fetchUserInfo();
           set({ session: sessionData.session, user: sessionData.session?.user ?? null, loading: false, error: null });
+          console.log(`[${timestamp}] [AuthStore] Sign-in completed`, { userId: sessionData.session?.user?.id });
         } else {
-          log('OAuth flow canceled or failed', { result });
+          console.log(`[${timestamp}] [AuthStore] OAuth flow canceled or failed`, { result });
           throw new Error(t('error.oauthCanceled'));
         }
       } catch (err) {
-        log('Sign-in error', err);
+        console.log(`[${timestamp}] [AuthStore] Sign-in error`, { error: err instanceof Error ? err.message : 'Unknown error' });
         set({ loading: false, error: err instanceof Error ? err : new Error(t('error.signIn')) });
       }
     },
@@ -120,35 +137,40 @@ export const useAuthStore = create<AuthState>((set) => {
       log('Starting sign-out');
       try {
         set({ loading: true, error: null });
-        log('Calling database function: auth.signOut');
+        console.log(`[${timestamp}] [AuthStore] Calling auth.signOut`);
         const { error } = await supabase.auth.signOut();
         if (error) {
-          log('Sign-out error', error);
+          console.log(`[${timestamp}] [AuthStore] Sign-out error`, { error: error.message });
           throw error;
         }
-        log('Sign-out successful');
+        console.log(`[${timestamp}] [AuthStore] Sign-out successful`);
         set({ session: null, user: null, profile: null, loading: false, error: null });
-        useUserSettingsStore.setState({ college: null, display_name: null, username: null, avatar_url: null }); // Clear settings
+        console.log(`[${timestamp}] [AuthStore] Clearing user settings`);
+        useUserSettingsStore.setState({ college: null, display_name: null, username: null, avatar_url: null });
       } catch (err) {
-        log('Sign-out error', err);
+        console.log(`[${timestamp}] [AuthStore] Sign-out error`, { error: err instanceof Error ? err.message : 'Unknown error' });
         set({ loading: false, error: err instanceof Error ? err : new Error(t('error.signOut')) });
       }
     },
     getSession: async () => {
       log('Getting current session');
       try {
-        log('Calling database function: auth.getSession');
+        console.log(`[${timestamp}] [AuthStore] Calling auth.getSession`);
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          log('Get session error', error);
+          console.log(`[${timestamp}] [AuthStore] Get session error`, { error: error.message });
           throw error;
         }
-        log('Session retrieved', { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
-        if (session) await useUserSettingsStore.getState().fetchUserInfo();
+        console.log(`[${timestamp}] [AuthStore] Session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
+        if (session) {
+          console.log(`[${timestamp}] [AuthStore] Fetching user info for session`);
+          await useUserSettingsStore.getState().fetchUserInfo();
+        }
         set({ session, user: session?.user ?? null, loading: false, error: null });
+        console.log(`[${timestamp}] [AuthStore] Session state updated`, { hasSession: !!session });
         return session;
       } catch (err) {
-        log('Get session error', err);
+        console.log(`[${timestamp}] [AuthStore] Get session error`, { error: err instanceof Error ? err.message : 'Unknown error' });
         set({ loading: false, error: err instanceof Error ? err : new Error(t('error.getSession')) });
         return null;
       }
@@ -162,6 +184,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
   console.log(`[${timestamp}] [AuthStore] Auth state changed`, { event, session: session ? { userId: session.user?.id, email: session.user?.email } : null });
   useAuthStore.setState({ session, user: session?.user ?? null, loading: false, error: null });
-  if (session) useUserSettingsStore.getState().fetchUserInfo();
 });
+const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+console.log(`[${timestamp}] [AuthStore] Subscribing to auth state changes and initializing`);
 initialize();

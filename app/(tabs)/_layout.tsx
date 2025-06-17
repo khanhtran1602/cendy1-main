@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  console.log(`[${timestamp}] [TabsLayout] Rendering TabsLayout`);
 
   return (
     <Tabs
@@ -21,6 +23,9 @@ export default function TabsLayout() {
             <MaterialCommunityIcons name="home" size={size} color={color} />
           ),
         }}
+        listeners={() => ({
+          tabPress: () => console.log(`[${timestamp}] [TabsLayout] Home tab pressed`),
+        })}
       />
       <Tabs.Screen
         name="chats/index"
@@ -30,6 +35,9 @@ export default function TabsLayout() {
             <MaterialCommunityIcons name="chat" size={size} color={color} />
           ),
         }}
+        listeners={() => ({
+          tabPress: () => console.log(`[${timestamp}] [TabsLayout] Chats tab pressed`),
+        })}
       />
       <Tabs.Screen
         name="settings/index"
@@ -39,6 +47,9 @@ export default function TabsLayout() {
             <MaterialCommunityIcons name="cog" size={size} color={color} />
           ),
         }}
+        listeners={() => ({
+          tabPress: () => console.log(`[${timestamp}] [TabsLayout] Settings tab pressed`),
+        })}
       />
     </Tabs>
   );
