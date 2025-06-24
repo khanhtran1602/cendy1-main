@@ -7,9 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { z } from 'zod';
-import { supabase } from '../../../lib/supabase';
-import { useAuthStore } from '../../../stores/authStore';
-import { useUserSettingsStore } from '../../../stores/userSettingsStore';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
+import { useUserSettingsStore } from '../stores/userSettingsStore';
 
 // Define form schema
 const postSchema = z.object({

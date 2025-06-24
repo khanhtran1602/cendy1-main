@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, StyleSheet, Text, View } from 'react-native';
+import CreatePostModal from '../../../components/CreatePostModal';
 import { useAuthStore } from '../../../stores/authStore';
-import CreatePostModal from './CreatePostModal';
 
 export default function HomeScreen() {
   const { session, user, loading: authLoading, error, signOut } = useAuthStore();
