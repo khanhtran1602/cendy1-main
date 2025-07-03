@@ -19,15 +19,6 @@ export default function HomeScreen() {
     console.log(`[${timestamp}] [HomeScreen] Component mounted`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null, authLoading });
   }, []);
 
-  // Redirect to login if no session
-  useEffect(() => {
-    console.log(`[${timestamp}] [HomeScreen] Checking session`, { hasSession: !!session, authLoading });
-    if (!session && !authLoading) {
-      console.log(`[${timestamp}] [HomeScreen] No session, redirecting to /`);
-      router.replace('/');
-    }
-  }, [session, authLoading]);
-
   // Handle errors
   useEffect(() => {
     if (error) {

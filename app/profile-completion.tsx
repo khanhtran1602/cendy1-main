@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { useUserSettingsStore } from '../stores/userSettingsStore';
 
 const profileSchema = z.object({
   display_name: z.string().min(2, 'Display name must be at least 2 characters').max(50, 'Display name must be less than 50 characters'),
@@ -19,6 +20,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function ProfileCompletionScreen() {
   const { session, user } = useAuthStore();
+  const { fetchUserInfo } = useUserSettingsStore();
   const router = useRouter();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -26,16 +28,22 @@ export default function ProfileCompletionScreen() {
 
   console.log(`[${timestamp}] [ProfileCompletionScreen] Rendering component`, { userId: user?.id, hasSession: !!session });
 
-  const { control, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
+  // Memoize defaultValues to prevent form reinitialization
+  const defaultValues = useMemo(
+    () => ({
       display_name: user?.user_metadata?.name || '',
       username: '',
       avatar_url: user?.user_metadata?.avatar_url || '',
-    },
+    }),
+    [user?.user_metadata?.name, user?.user_metadata?.avatar_url]
+  );
+
+  const { control, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues,
   });
 
-  console.log(`[${timestamp}] [ProfileCompletionScreen] Form initialized`, { defaultValues: { display_name: user?.user_metadata?.name, username: '', avatar_url: user?.user_metadata?.avatar_url } });
+  console.log(`[${timestamp}] [ProfileCompletionScreen] Form initialized`, { defaultValues });
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -54,39 +62,18 @@ export default function ProfileCompletionScreen() {
     },
     onSuccess: async () => {
       console.log(`[${timestamp}] [ProfileCompletionScreen] Profile update mutation successful`);
-      // Re-check profile completion
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Calling check_profile_completion RPC`);
-      const { data: NeedComplete, error } = await supabase.rpc('check_profile_completion');
-      if (error) {
-        console.log(`[${timestamp}] [ProfileCompletionScreen] check_profile_completion error`, { error: error.message });
-        Alert.alert(t('error.title'), error.message || t('error.generic'));
-        return;
-      }
-      console.log(`[${timestamp}] [ProfileCompletionScreen] check_profile_completion result`, { NeedComplete });
-      if (NeedComplete === false) {
-        console.log(`[${timestamp}] [ProfileCompletionScreen] Invalidating profileCompletion query`, { userId: user?.id });
-        await queryClient.invalidateQueries({ queryKey: ['profileCompletion', user?.id] });
-        console.log(`[${timestamp}] [ProfileCompletionScreen] Redirecting to /tabs/home`);
-        router.replace('/(tabs)/home');
-      } else {
-        console.log(`[${timestamp}] [ProfileCompletionScreen] Profile still incomplete`);
-        Alert.alert(t('error.title'), t('error.generic'));
-      }
+      // Fetch updated user info
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Fetching updated user info`);
+      await fetchUserInfo();
+      // Redirect to home
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Redirecting to /tabs/home`);
+      router.replace('/(tabs)/home');
     },
     onError: (error) => {
       console.log(`[${timestamp}] [ProfileCompletionScreen] Profile update mutation error`, { error: error.message });
       Alert.alert(t('error.title'), error.message || t('error.generic'));
     },
   });
-
-  // Redirect if no session
-  useEffect(() => {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Checking session`, { hasSession: !!session });
-    if (!session) {
-      console.log(`[${timestamp}] [ProfileCompletionScreen] No session, redirecting to /`);
-      router.replace('/');
-    }
-  }, [session]);
 
   const onSubmit = (data: ProfileFormData) => {
     console.log(`[${timestamp}] [ProfileCompletionScreen] Form submitted`, { data });

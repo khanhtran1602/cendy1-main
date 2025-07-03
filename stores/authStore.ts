@@ -120,10 +120,6 @@ export const useAuthStore = create<AuthState>((set) => {
             throw sessionError;
           }
           console.log(`[${timestamp}] [AuthStore] Session set successfully`, { userId: sessionData.session?.user?.id, email: sessionData.session?.user?.email });
-          console.log(`[${timestamp}] [AuthStore] Fetching user info after sign-in`);
-          await useUserSettingsStore.getState().fetchUserInfo();
-          set({ session: sessionData.session, user: sessionData.session?.user ?? null, loading: false, error: null });
-          console.log(`[${timestamp}] [AuthStore] Sign-in completed`, { userId: sessionData.session?.user?.id });
         } else {
           console.log(`[${timestamp}] [AuthStore] OAuth flow canceled or failed`, { result });
           throw new Error(t('error.oauthCanceled'));

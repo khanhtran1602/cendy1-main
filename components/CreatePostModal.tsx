@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -29,9 +28,8 @@ interface CreatePostModalProps {
   onClose: () => void;
 }
 
-export default function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
+function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { college } = useUserSettingsStore();
@@ -40,28 +38,24 @@ export default function CreatePostModal({ visible, onClose }: CreatePostModalPro
 
   console.log(`[${timestamp}] [CreatePostModal] Rendering component`, { visible, userId: user?.id, college });
 
-  const { control, handleSubmit, formState: { errors }, reset } = useForm<PostFormData>({
-    resolver: zodResolver(postSchema),
-    defaultValues: {
-      channel: 'Campus Feed',
+  // Memoize defaultValues to prevent form reinitialization
+  const defaultValues = useMemo(
+    () => ({
+      channel: 'Campus Feed' as const,
       title: '',
       category: '',
       bodytext: '',
       image_url: '',
-    },
+    }),
+    []
+  );
+
+  const { control, handleSubmit, formState: { errors }, reset } = useForm<PostFormData>({
+    resolver: zodResolver(postSchema),
+    defaultValues,
   });
 
-  console.log(`[${timestamp}] [CreatePostModal] Form initialized`, { defaultValues: { channel: 'Campus Feed', title: '', category: '', bodytext: '', image_url: '' } });
-
-  // Redirect if no user or college
-  useEffect(() => {
-    console.log(`[${timestamp}] [CreatePostModal] Checking user and college`, { hasUser: !!user, college });
-    if (!user || !college) {
-      console.log(`[${timestamp}] [CreatePostModal] No user or college, redirecting to /`);
-      Alert.alert(t('error.title'), t('error.unauthenticated'));
-      router.replace('/');
-    }
-  }, [user, college]);
+  console.log(`[${timestamp}] [CreatePostModal] Form initialized`, { defaultValues });
 
   // Mutation to create post
   const createPostMutation = useMutation({
@@ -381,3 +375,5 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
+
+export default memo(CreatePostModal);
