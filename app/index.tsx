@@ -1,9 +1,12 @@
-// This file serves as the login screen and root route handler
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Button } from '../components/ui/button';
+import { Text } from '../components/ui/text';
+import { useModeToggle } from '../hooks/useModeToggle';
+import { useThemeColor } from '../hooks/useThemeColor';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 
@@ -11,9 +14,12 @@ export default function LoginScreen() {
   const { session, loading, error, signInWithGoogle } = useAuthStore();
   const router = useRouter();
   const { t } = useTranslation();
+  const { mode, setMode, isDark } = useModeToggle();
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const backgroundColor = useThemeColor({}, 'background');
+  const mutedColor = useThemeColor({}, 'textMuted');
 
-  console.log(`[${timestamp}] [LoginScreen] Rendering component`, { userId: session?.user?.id, email: session?.user?.email, loading });
+  console.log(`[${timestamp}] [LoginScreen] Rendering component`, { userId: session?.user?.id, email: session?.user?.email, loading, mode });
 
   // Check profile completion status
   const { data: needsCompletion, isLoading: isChecking } = useQuery({
@@ -49,21 +55,106 @@ export default function LoginScreen() {
   useEffect(() => {
     if (error) {
       console.log(`[${timestamp}] [LoginScreen] Error occurred`, { error: error.message });
-      Alert.alert(t('error.title'), error.message || t('error.generic'));
     }
   }, [error]);
 
+  // Placeholder for Microsoft and Apple sign-in (planned features)
+  const signInWithMicrosoft = async () => {
+    console.log(`[${timestamp}] [LoginScreen] Microsoft sign-in placeholder`);
+  };
+
+  const signInWithApple = async () => {
+    console.log(`[${timestamp}] [LoginScreen] Apple sign-in placeholder`);
+  };
+
+  // Handle theme toggle
+  const handleThemeToggle = () => {
+    console.log(`[${timestamp}] [LoginScreen] Theme toggle pressed, current mode: ${mode}`);
+    setMode(mode === 'light' ? 'dark' : mode === 'dark' ? 'system' : 'light');
+  };
+
+  // Handle link presses
+  const handleLinkPress = (url: string) => {
+    console.log(`[${timestamp}] [LoginScreen] Link pressed`, { url });
+    Linking.openURL(url);
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('login.title')}</Text>
-      <Button
-        title={loading ? t('login.signingIn') : t('login.signIn')}
-        onPress={() => {
-          console.log(`[${timestamp}] [LoginScreen] Sign-in button pressed`);
-          signInWithGoogle();
-        }}
-        disabled={loading}
-      />
+    <View style={[styles.container, { backgroundColor }]}>
+      {/* Theme Toggle Button */}
+      <View style={styles.themeToggleContainer}>
+        <Button
+          icon={{ family: 'Ionicons', name: isDark ? 'moon' : 'sunny' }}
+          size="lg"
+          variant="ghost"
+          onPress={handleThemeToggle}
+          accessibilityLabel={t('settings.themeToggle')}
+        />
+      </View>
+
+      {/* Main Title */}
+      <Text variant="heading" style={styles.title} >
+        Cendy
+      </Text>
+
+      {/* Subtitle */}
+      <Text variant="caption" style={styles.subtitle}>
+        {t('login.subtitle')}
+      </Text>
+
+      {/* Social Login Buttons */}
+      <View style={styles.buttonContainer}>
+        <Button
+          icon={{ family: 'AntDesign', name: 'google' }}
+          variant="secondary"
+          size="lg"
+          onPress={() => {
+            console.log(`[${timestamp}] [LoginScreen] Google sign-in button pressed`);
+            signInWithGoogle();
+          }}
+          disabled={loading}
+        >
+          {loading ? t('login.signingIn') : t('login.signIn')}
+        </Button>
+        <Button
+          icon={{ family: 'MaterialCommunityIcons', name: 'microsoft' }}
+          variant="secondary"
+          size="lg"
+          onPress={() => {
+            console.log(`[${timestamp}] [LoginScreen] Microsoft sign-in button pressed`);
+            signInWithMicrosoft();
+          }}
+          disabled={loading}
+        >
+          {t('login.signInMicrosoft')}
+        </Button>
+        <Button
+          icon={{ family: 'AntDesign', name: 'apple1' }}
+          variant="secondary"
+          size="lg"
+          onPress={() => {
+            console.log(`[${timestamp}] [LoginScreen] Apple sign-in button pressed`);
+            signInWithApple();
+          }}
+          disabled={loading}
+        >
+          {t('login.signInApple')}
+        </Button>
+      </View>
+
+      {/* Footer Legal Text */}
+      <View style={styles.footer}>
+        <Text variant="caption" style={[styles.footerText, { color: mutedColor }]}>
+          {t('login.legalText')}{' '}
+          <TouchableOpacity onPress={() => handleLinkPress('https://cendy.app/terms')}>
+            <Text variant="link">{t('login.termsOfService')}</Text>
+          </TouchableOpacity>{' '}
+          {t('login.and')}{' '}
+          <TouchableOpacity onPress={() => handleLinkPress('https://cendy.app/privacy')}>
+            <Text variant="link">{t('login.privacyPolicy')}</Text>
+          </TouchableOpacity>
+        </Text>
+      </View>
     </View>
   );
 }
@@ -75,9 +166,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  themeToggleContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 0,
+  },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    fontSize: 50,
+    bottom: 40,
+  },
+  subtitle: {
+    marginBottom: 40,
+    textAlign: 'center',
+    bottom: 20
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 15,
     marginBottom: 20,
+    top: 140
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 55,
+    width: '100%',
+    alignItems: 'center',
+  },
+  footerText: {
+    textAlign: 'center',
   },
 });

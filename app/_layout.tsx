@@ -1,3 +1,4 @@
+import { ThemeProvider } from '@/theme/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -41,11 +42,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="profile-completion" options={{ headerShown: false }} />
-        </Stack>
+        <ThemeProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="profile-completion" options={{ headerShown: false }} />
+          </Stack>
+        </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
