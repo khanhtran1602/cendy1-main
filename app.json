@@ -13,7 +13,11 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.khanhtran160202.cendy"
+      "bundleIdentifier": "com.khanhtran160202.cendy",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to save and manage your photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to save photos to your photo library."
+      }
     },
     "android": {
       "package": "com.khanhtran160202.cendy",
@@ -21,7 +25,12 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -39,7 +48,15 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

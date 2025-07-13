@@ -1,6 +1,8 @@
+import { MediaAsset, MediaPicker } from '@/components/ui/media-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export default function ChatsScreen() {
   const { t } = useTranslation();
@@ -12,16 +14,22 @@ export default function ChatsScreen() {
       console.error('Error reading AsyncStorage:', err);
     }
   };
+  const [selected, setSelected] = useState<MediaAsset[]>([]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('chats.title')}</Text>
-      <Text>{t('chats.placeholder')}</Text>
-      <Button title="Debug Persisted State" onPress={debugPersistedState} />
-    </View>
+    <MediaPicker
+      mediaType='all'
+      gallery={true}
+      multiple={true}
+      maxSelection={4}
+      icon={{ family: 'Ionicons', name: 'camera' }}
+      variant='ghost'
+      selectedAssets={selected}
+      onSelectionChange={setSelected}
+      previewSize={200}
+    />
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

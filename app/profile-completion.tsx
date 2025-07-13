@@ -1,14 +1,26 @@
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { MediaAsset } from '@/components/ui/media-picker';
+import { Text } from '@/components/ui/text';
+import { View } from '@/components/ui/view';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
+import { useUserSettingsStore } from '@/stores/userSettingsStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
+import { Image as ExpoImage } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { Camera } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../stores/authStore';
-import { useUserSettingsStore } from '../stores/userSettingsStore';
+
+import { compressIfNeeded } from '@/lib/media/manip';
+import { openCropper } from '@/lib/media/picker';
 
 const profileSchema = z.object({
   display_name: z.string().min(2, 'Display name must be at least 2 characters').max(50, 'Display name must be less than 50 characters'),
@@ -23,8 +35,11 @@ export default function ProfileCompletionScreen() {
   const { fetchUserInfo } = useUserSettingsStore();
   const router = useRouter();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // Add queryClient
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const [selectedPhoto, setSelectedPhoto] = useState<MediaAsset | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   console.log(`[${timestamp}] [ProfileCompletionScreen] Rendering component`, { userId: user?.id, hasSession: !!session });
 
@@ -38,10 +53,12 @@ export default function ProfileCompletionScreen() {
     [user?.user_metadata?.name, user?.user_metadata?.avatar_url]
   );
 
-  const { control, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
+  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues,
   });
+
+  const currentAvatarUrl = watch('avatar_url');
 
   console.log(`[${timestamp}] [ProfileCompletionScreen] Form initialized`, { defaultValues });
 
@@ -71,92 +88,243 @@ export default function ProfileCompletionScreen() {
     },
     onError: (error) => {
       console.log(`[${timestamp}] [ProfileCompletionScreen] Profile update mutation error`, { error: error.message });
-      Alert.alert(t('error.title'), error.message || t('error.generic'));
+      setMediaError(error.message || t('error.generic'));
     },
   });
+
+  // Handle photo selection with cropping, compression, and prefetching
+  const handlePhotoSelection = async (assets: MediaAsset[]) => {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Photo selected`, { assets });
+    const photo = assets[0] || null;
+    
+    if (!photo) {
+      setSelectedPhoto(null);
+      setValue('avatar_url', '');
+      return;
+    }
+
+    setIsProcessingImage(true);
+    setMediaError(null);
+
+    try {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Starting image processing`);
+      
+      // Step 1: Open cropper
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Opening cropper`);
+      const croppedImage = await openCropper({
+        imageUri: photo.uri,
+        shape: 'circle',
+        aspectRatio: 1 / 1,
+      });
+
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image cropped`, { croppedImage });
+
+      // Step 2: Compress the cropped image
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Compressing image`);
+      const compressedImage = await compressIfNeeded(croppedImage, 1000000);
+
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image compressed`, { 
+        originalSize: croppedImage.size,
+        compressedSize: compressedImage.size 
+      });
+
+      // Step 3: Prefetch the image to prevent flicker
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetching image`);
+      await ExpoImage.prefetch(compressedImage.path);
+
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image prefetched successfully`);
+
+      // Step 4: Update state with processed image
+      const processedAsset: MediaAsset = {
+        id: `processed_avatar_${Date.now()}`,
+        uri: compressedImage.path,
+        type: 'image',
+        width: compressedImage.width,
+        height: compressedImage.height,
+        filename: `avatar_${Date.now()}.jpg`,
+        fileSize: compressedImage.size,
+      };
+
+      setSelectedPhoto(processedAsset);
+      setValue('avatar_url', processedAsset.uri);
+      
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing completed`, { processedAsset });
+
+    } catch (error) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing error`, { error });
+      setMediaError(error instanceof Error ? error.message : 'Failed to process image');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  // Handle photo selection directly using ImagePicker
+  const handleAvatarPress = async () => {
+    if (isProcessingImage) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing in progress, ignoring avatar press`);
+      return;
+    }
+
+    try {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Avatar pressed, launching image picker`);
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const newAsset: MediaAsset = {
+          id: `avatar_${Date.now()}`,
+          uri: asset.uri,
+          type: 'image',
+          width: asset.width,
+          height: asset.height,
+          filename: asset.fileName || undefined,
+          fileSize: asset.fileSize,
+        };
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Image selected`, { newAsset });
+        await handlePhotoSelection([newAsset]);
+      }
+    } catch (error) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Error picking image`, { error });
+      handleMediaError('Failed to pick image from gallery');
+    }
+  };
+
+  // Handle media picker error
+  const handleMediaError = (error: string) => {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Media picker error`, { error });
+    setMediaError(error);
+  };
 
   const onSubmit = (data: ProfileFormData) => {
     console.log(`[${timestamp}] [ProfileCompletionScreen] Form submitted`, { data });
     updateProfileMutation.mutate(data);
   };
 
+  // Determine which image to show (priority: selectedPhoto > currentAvatarUrl > fallback)
+  const avatarImageSource = selectedPhoto?.uri || currentAvatarUrl || null;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('profileCompletion.title')}</Text>
+      {/* Form Title */}
+      <Text variant="title" style={styles.title}>
+        {t('profileCompletion.title')}
+      </Text>
+
+      {/* Avatar Section */}
+      <View style={styles.avatarSection}>
+        <Pressable 
+          onPress={handleAvatarPress} 
+          style={[
+            styles.avatarPressable,
+            (isProcessingImage || updateProfileMutation.isPending) && styles.avatarPressableDisabled
+          ]}
+          disabled={isProcessingImage || updateProfileMutation.isPending}
+        >
+          <Avatar size={100} style={styles.avatar}>
+            {avatarImageSource ? (
+              <AvatarImage source={{ uri: avatarImageSource }} />
+            ) : (
+              <AvatarFallback>
+                <Camera size={32} color="#666" />
+              </AvatarFallback>
+            )}
+          </Avatar>
+          {isProcessingImage && (
+            <View style={styles.processingOverlay}>
+              <Text variant="caption" style={styles.processingText}>
+                Processing...
+              </Text>
+            </View>
+          )}
+        </Pressable>
+        
+        <Text variant="heading" style={styles.setPhotoTitle}>
+          {t('completeProfile.setNewPhoto', { defaultValue: 'Set New Photo' })}
+        </Text>
+      </View>
+
+      {/* Form Fields */}
       <Controller
         control={control}
         name="display_name"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={t('profileCompletion.displayNamePlaceholder')}
-              onBlur={() => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Display name input blurred`, { value });
-                onBlur();
-              }}
-              onChangeText={(text) => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Display name input changed`, { text });
-                onChange(text);
-              }}
-              value={value}
-            />
-            {errors.display_name && <Text style={styles.error}>{errors.display_name.message}</Text>}
-          </View>
+          <Input
+            label={t('profileCompletion.displayName')}
+            placeholder={t('profileCompletion.displayNamePlaceholder')}
+            onBlur={() => {
+              console.log(`[${timestamp}] [ProfileCompletionScreen] Display name input blurred`, { value });
+              onBlur();
+            }}
+            onChangeText={(text) => {
+              console.log(`[${timestamp}] [ProfileCompletionScreen] Display name input changed`, { text });
+              onChange(text);
+            }}
+            value={value}
+            error={errors.display_name?.message}
+            disabled={updateProfileMutation.isPending || isProcessingImage}
+            containerStyle={styles.inputContainer}
+          />
         )}
       />
+      
       <Controller
         control={control}
         name="username"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={t('profileCompletion.usernamePlaceholder')}
-              onBlur={() => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Username input blurred`, { value });
-                onBlur();
-              }}
-              onChangeText={(text) => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Username input changed`, { text });
-                onChange(text);
-              }}
-              value={value}
-            />
-            {errors.username && <Text style={styles.error}>{errors.username.message}</Text>}
-          </View>
+          <Input
+            label={t('profileCompletion.username')}
+            placeholder={t('profileCompletion.usernamePlaceholder')}
+            onBlur={() => {
+              console.log(`[${timestamp}] [ProfileCompletionScreen] Username input blurred`, { value });
+              onBlur();
+            }}
+            onChangeText={(text) => {
+              console.log(`[${timestamp}] [ProfileCompletionScreen] Username input changed`, { text });
+              onChange(text);
+            }}
+            value={value}
+            error={errors.username?.message}
+            disabled={updateProfileMutation.isPending || isProcessingImage}
+            containerStyle={styles.inputContainer}
+          />
         )}
       />
+
+      {/* Hidden avatar_url field */}
       <Controller
         control={control}
         name="avatar_url"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder={t('profileCompletion.avatarUrlPlaceholder')}
-              onBlur={() => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Avatar URL input blurred`, { value });
-                onBlur();
-              }}
-              onChangeText={(text) => {
-                console.log(`[${timestamp}] [ProfileCompletionScreen] Avatar URL input changed`, { text });
-                onChange(text);
-              }}
-              value={value}
-            />
-            {errors.avatar_url && <Text style={styles.error}>{errors.avatar_url.message}</Text>}
+        render={({ field: { value } }) => (
+          <View style={{ display: 'none' }}>
+            <Input value={value} />
           </View>
         )}
       />
+
+      {mediaError && (
+        <Text variant="caption" style={styles.error}>
+          {mediaError}
+        </Text>
+      )}
+
       <Button
-        title={updateProfileMutation.isPending ? t('profileCompletion.submitting') : t('profileCompletion.submit')}
         onPress={() => {
           console.log(`[${timestamp}] [ProfileCompletionScreen] Submit button pressed`);
           handleSubmit(onSubmit)();
         }}
-        disabled={updateProfileMutation.isPending}
-      />
+        disabled={updateProfileMutation.isPending || isProcessingImage}
+        loading={updateProfileMutation.isPending}
+        variant="default"
+        size="lg"
+        style={styles.submitButton}
+      >
+        {updateProfileMutation.isPending ? t('profileCompletion.submitting') : t('profileCompletion.submit')}
+      </Button>
     </View>
   );
 }
@@ -169,23 +337,62 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  avatarPressable: {
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatarPressableDisabled: {
+    opacity: 0.6,
+  },
+  avatar: {
+    borderWidth: 3,
+    borderColor: '#e0e0e0',
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingText: {
+    color: 'white',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  setPhotoTitle: {
+    marginTop: 12,
+    textAlign: 'center',
   },
   inputContainer: {
     width: '100%',
     marginBottom: 15,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
+  submitButton: {
     width: '100%',
+    marginTop: 20,
   },
   error: {
     color: 'red',
-    fontSize: 12,
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });
