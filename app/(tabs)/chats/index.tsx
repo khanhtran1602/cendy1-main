@@ -1,45 +1,92 @@
-import { MediaAsset, MediaPicker } from '@/components/ui/media-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useState } from 'react';
+import { ScrollView } from '@/components/ui/scroll-view';
+import { Text } from '@/components/ui/text';
+import { View } from '@/components/ui/view';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
-
 export default function ChatsScreen() {
   const { t } = useTranslation();
-  const debugPersistedState = async () => {
-    try {
-      const data = await AsyncStorage.getItem('user-settings-storage');
-      console.log('Persisted State:', data ? JSON.parse(data) : 'No data found');
-    } catch (err) {
-      console.error('Error reading AsyncStorage:', err);
-    }
-  };
-  const [selected, setSelected] = useState<MediaAsset[]>([]);
 
   return (
-    <MediaPicker
-      mediaType='all'
-      gallery={true}
-      multiple={true}
-      maxSelection={4}
-      icon={{ family: 'Ionicons', name: 'camera' }}
-      variant='ghost'
-      selectedAssets={selected}
-      onSelectionChange={setSelected}
-      previewSize={200}
-    />
-  );
-}
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-});
+    <View style={{ height: 300, borderRadius: 16, overflow: 'hidden' }}>
+        <ScrollView
+          style={{
+            backgroundColor: '#1f2937',
+            borderRadius: 16,
+          }}
+          contentContainerStyle={{
+            padding: 20,
+            gap: 16,
+          }}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+        >
+          <View
+            style={{
+              padding: 20,
+              backgroundColor: '#374151',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#4b5563',
+            }}
+          >
+            <Text
+              style={{
+                color: '#f9fafb',
+                fontSize: 18,
+                fontWeight: 'bold',
+                marginBottom: 8,
+              }}
+            >
+              🌙 Dark Theme ScrollView
+            </Text>
+            <Text style={{ color: '#d1d5db' }}>
+              This ScrollView uses custom dark styling with rounded corners and
+              shadows.
+            </Text>
+          </View>
+          {Array.from({ length: 12 }, (_, i) => (
+            <View
+              key={i}
+              style={{
+                padding: 16,
+                backgroundColor: i % 2 === 0 ? '#6366f1' : '#8b5cf6',
+                borderRadius: 12,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  marginBottom: 4,
+                }}
+              >
+                Card {i + 1}
+              </Text>
+              <Text style={{ color: '#e5e7eb', opacity: 0.9 }}>
+                Beautiful custom styled card with gradient-like colors and
+                shadows.
+              </Text>
+            </View>
+          ))}
+          <View
+            style={{
+              padding: 20,
+              backgroundColor: '#059669',
+              borderRadius: 12,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>
+              ✨ End of styled content
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }

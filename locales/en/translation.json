@@ -12,12 +12,14 @@
     "signInApple": "Log in with Apple",
     "subtitle": "Safe, Private, For Students"
   },
-  "completeProfile": {
+  "profileCompletion": {
     "title": "Complete Your Profile",
     "displayName": "Display Name",
     "displayNamePlaceholder": "Enter your display name",
+    "displayNameNote": "Display names are used to interact with other users on Cendy",
     "username": "Username",
     "usernamePlaceholder": "Enter your username",
+    "usernameNote": "Usernames are used to identify you on Cendy",
     "avatarUrl": "Avatar URL (optional)",
     "avatarUrlPlaceholder": "Enter your avatar URL",
     "submit": "Submit",

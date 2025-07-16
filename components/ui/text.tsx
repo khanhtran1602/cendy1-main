@@ -2,9 +2,9 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { FONT_SIZE } from '@/theme/globals';
 import React, { forwardRef } from 'react';
 import {
-    Text as RNText,
-    TextProps as RNTextProps,
-    TextStyle,
+  Text as RNText,
+  TextProps as RNTextProps,
+  TextStyle,
 } from 'react-native';
 
 type TextVariant =
@@ -13,7 +13,8 @@ type TextVariant =
   | 'subtitle'
   | 'caption'
   | 'heading'
-  | 'link';
+  | 'link'
+  | 'note';
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
@@ -32,6 +33,7 @@ export const Text = forwardRef<RNText, TextProps>(
       'text'
     );
     const mutedColor = useThemeColor({}, 'textMuted');
+    const blueColor = useThemeColor({}, 'blue');
 
     const getTextStyle = (): TextStyle => {
       const baseStyle: TextStyle = {
@@ -68,14 +70,21 @@ export const Text = forwardRef<RNText, TextProps>(
           return {
             ...baseStyle,
             fontSize: FONT_SIZE,
-            fontWeight: '500',
-            textDecorationLine: 'underline',
+            fontWeight: '400',
+            color: blueColor,
           };
         default: // 'body'
           return {
             ...baseStyle,
             fontSize: FONT_SIZE,
             fontWeight: '400',
+          };
+        case 'note':
+          return {
+            ...baseStyle,
+            fontSize: 14,
+            fontWeight: '400',
+            color: mutedColor,
           };
       }
     };

@@ -4,12 +4,12 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { BORDER_RADIUS, CORNERS, FONT_SIZE, HEIGHT } from '@/theme/globals';
 import React, { forwardRef, ReactElement, useState } from 'react';
 import {
-    Pressable,
-    TextInput,
-    TextInputProps,
-    TextStyle,
-    View,
-    ViewStyle,
+  Pressable,
+  TextInput,
+  TextInputProps,
+  TextStyle,
+  View,
+  ViewStyle,
 } from 'react-native';
 
 export type ButtonIcon = {
@@ -82,7 +82,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         flexDirection: isTextarea ? 'column' : 'row',
         alignItems: isTextarea ? 'stretch' : 'center',
         minHeight: getHeight(),
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingVertical: isTextarea ? 12 : 0,
       };
 
@@ -184,7 +184,7 @@ export const Input = forwardRef<TextInput, InputProps>(
                         ellipsizeMode='tail'
                         style={[
                           {
-                            color: error ? danger : muted,
+                            color: error ? danger : primary,
                           },
                           labelStyle,
                         ]}
@@ -244,7 +244,7 @@ export const Input = forwardRef<TextInput, InputProps>(
                     ellipsizeMode='tail'
                     style={[
                       {
-                        color: error ? danger : muted,
+                        color: error ? danger : primary,
                       },
                       labelStyle,
                     ]}
@@ -351,7 +351,7 @@ export const GroupedInput = ({
             style={{
               minHeight: HEIGHT,
               paddingVertical: 12,
-              paddingHorizontal: 16,
+              paddingHorizontal: 12,
               justifyContent: 'center',
               borderBottomWidth: index !== childrenArray.length - 1 ? 1 : 0,
               borderColor: border,
@@ -495,7 +495,7 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                         ellipsizeMode='tail'
                         style={[
                           {
-                            color: error ? danger : muted,
+                            color: error ? danger : primary,
                           },
                           labelStyle,
                         ]}
@@ -566,7 +566,7 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
                     ellipsizeMode='tail'
                     style={[
                       {
-                        color: error ? danger : muted,
+                        color: error ? danger : primary,
                       },
                       labelStyle,
                     ]}
@@ -607,7 +607,6 @@ export const GroupedInputItem = forwardRef<TextInput, GroupedInputItemProps>(
         </View>
       </Pressable>
     );
-
     return renderItemContent();
   }
 );

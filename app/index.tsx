@@ -22,7 +22,7 @@ export default function LoginScreen() {
   console.log(`[${timestamp}] [LoginScreen] Rendering component`, { userId: session?.user?.id, email: session?.user?.email, loading, mode });
 
   // Check profile completion status
-  const { data: needsCompletion, isLoading: isChecking } = useQuery({
+  const { data: needsCompletion, isLoading} = useQuery({
     queryKey: ['profileCompletion', session?.user?.id],
     queryFn: async () => {
       console.log(`[${timestamp}] [LoginScreen] Calling check_profile_completion RPC`);
@@ -35,6 +35,7 @@ export default function LoginScreen() {
       return data as boolean;
     },
     enabled: !!session,
+    gcTime: 0,
   });
 
   // Log component mount and state
@@ -44,12 +45,12 @@ export default function LoginScreen() {
 
   // Redirect based on session and profile completion
   useEffect(() => {
-    console.log(`[${timestamp}] [LoginScreen] Checking session and profile completion`, { hasSession: !!session, isChecking, needsCompletion });
-    if (session && !isChecking) {
-      console.log(`[${timestamp}] [LoginScreen] Redirecting to ${needsCompletion ? '/profile-completion' : '/tabs/home'}`, { userId: session.user?.id, email: session.user?.email });
+    if (session && !isLoading) {
+      console.log(`[${timestamp}] [LoginScreen] Checking session and profile completion`, { hasSession: !!session, isLoading, needsCompletion });
+      console.log(`[${timestamp}] [LoginScreen] Redirecting to ${needsCompletion ? '/profile-completion' : '/(tabs)/home'}`, { userId: session.user?.id, email: session.user?.email });
       router.replace(needsCompletion ? '/profile-completion' : '/(tabs)/home');
     }
-  }, [session, needsCompletion, isChecking]);
+  }, [session, isLoading, needsCompletion, router]);
 
   // Handle errors
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function LoginScreen() {
       </View>
 
       {/* Main Title */}
-      <Text variant="heading" style={styles.title} >
+      <Text variant="heading" style={styles.title}>
         Cendy
       </Text>
 
@@ -180,13 +181,13 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 40,
     textAlign: 'center',
-    bottom: 20
+    bottom: 20,
   },
   buttonContainer: {
     width: '100%',
     gap: 15,
     marginBottom: 20,
-    top: 140
+    top: 140,
   },
   footer: {
     position: 'absolute',

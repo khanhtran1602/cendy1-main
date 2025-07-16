@@ -2,13 +2,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MediaAsset } from '@/components/ui/media-picker';
+import { ScreenLayout } from '@/components/ui/screen-layout';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { compressIfNeeded } from '@/lib/media/manip';
+import { openCropper } from '@/lib/media/picker';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserSettingsStore } from '@/stores/userSettingsStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -18,9 +22,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 import { z } from 'zod';
-
-import { compressIfNeeded } from '@/lib/media/manip';
-import { openCropper } from '@/lib/media/picker';
 
 const profileSchema = z.object({
   display_name: z.string().min(2, 'Display name must be at least 2 characters').max(50, 'Display name must be less than 50 characters'),
@@ -35,11 +36,12 @@ export default function ProfileCompletionScreen() {
   const { fetchUserInfo } = useUserSettingsStore();
   const router = useRouter();
   const { t } = useTranslation();
-  const queryClient = useQueryClient(); // Add queryClient
+  const queryClient = useQueryClient();
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
   const [selectedPhoto, setSelectedPhoto] = useState<MediaAsset | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const backgroundColor = useThemeColor({}, 'background');
 
   console.log(`[${timestamp}] [ProfileCompletionScreen] Rendering component`, { userId: user?.id, hasSession: !!session });
 
@@ -209,9 +211,9 @@ export default function ProfileCompletionScreen() {
   const avatarImageSource = selectedPhoto?.uri || currentAvatarUrl || null;
 
   return (
-    <View style={styles.container}>
+    <ScreenLayout containerStyle={{ paddingHorizontal: 12 }}>
       {/* Form Title */}
-      <Text variant="title" style={styles.title}>
+      <Text variant="heading" style={styles.title}>
         {t('profileCompletion.title')}
       </Text>
 
@@ -242,12 +244,16 @@ export default function ProfileCompletionScreen() {
             </View>
           )}
         </Pressable>
-        
-        <Text variant="heading" style={styles.setPhotoTitle}>
-          {t('completeProfile.setNewPhoto', { defaultValue: 'Set New Photo' })}
-        </Text>
-      </View>
-
+        <Pressable 
+          onPress={handleAvatarPress} 
+          disabled={isProcessingImage || updateProfileMutation.isPending}
+          style={(isProcessingImage || updateProfileMutation.isPending) && styles.avatarPressableDisabled}
+        >
+          <Text variant="link" style={styles.setPhotoTitle}>
+            {t('completeProfile.setNewPhoto', { defaultValue: 'Set New Photo' })}
+          </Text>
+        </Pressable>
+     </View>
       {/* Form Fields */}
       <Controller
         control={control}
@@ -271,7 +277,9 @@ export default function ProfileCompletionScreen() {
           />
         )}
       />
-      
+      <Text variant="note" style={styles.note}>
+        {t('profileCompletion.displayNameNote')}
+      </Text>      
       <Controller
         control={control}
         name="username"
@@ -294,7 +302,9 @@ export default function ProfileCompletionScreen() {
           />
         )}
       />
-
+      <Text variant="note" style={styles.note}>
+        {t('profileCompletion.usernameNote')}
+      </Text>
       {/* Hidden avatar_url field */}
       <Controller
         control={control}
@@ -305,13 +315,11 @@ export default function ProfileCompletionScreen() {
           </View>
         )}
       />
-
       {mediaError && (
         <Text variant="caption" style={styles.error}>
           {mediaError}
         </Text>
       )}
-
       <Button
         onPress={() => {
           console.log(`[${timestamp}] [ProfileCompletionScreen] Submit button pressed`);
@@ -320,29 +328,22 @@ export default function ProfileCompletionScreen() {
         disabled={updateProfileMutation.isPending || isProcessingImage}
         loading={updateProfileMutation.isPending}
         variant="default"
-        size="lg"
         style={styles.submitButton}
       >
         {updateProfileMutation.isPending ? t('profileCompletion.submitting') : t('profileCompletion.submit')}
       </Button>
-    </View>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
   title: {
-    marginBottom: 30,
+    marginBottom: 32, // Increased for better separation
     textAlign: 'center',
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 32, // Consistent with title
   },
   avatarPressable: {
     position: 'relative',
@@ -384,15 +385,20 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 15,
+    marginBottom: 8, // Consistent spacing between inputs
+  },
+  note: {
+    marginBottom: 32, // Aligned with inputContainer
+    textAlign: 'left',
+    marginLeft: 14,
   },
   submitButton: {
     width: '100%',
-    marginTop: 20,
+    marginTop: 20, // Slightly larger to separate the button from the form
   },
   error: {
     color: 'red',
-    marginBottom: 10,
+    marginBottom: 16, // Consistent with other elements
     textAlign: 'center',
   },
 });
