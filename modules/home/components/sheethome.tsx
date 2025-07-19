@@ -1,21 +1,22 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
 } from '@/components/ui/sheet';
-import { Text } from '@/components/ui/text';
-import { View } from '@/components/ui/view';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
-export default function SettingsScreen() {
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+export default function SheetNavigation() {
   const [open, setOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('home');
+  const router = useRouter();
 
   const textColor = useThemeColor({}, 'text');
   const mutedColor = useThemeColor({}, 'textMuted');
@@ -33,12 +34,31 @@ export default function SettingsScreen() {
   const handleItemPress = (itemId: string) => {
     setActiveItem(itemId);
     setOpen(false);
+    // Navigate to corresponding screen
+    if (itemId === 'home') {
+      router.push('/(tabs)/home');
+    } else if (itemId === 'profile') {
+      router.push('/profile');
+    } else if (itemId === 'messages') {
+      router.push('/messages');
+    } else if (itemId === 'search') {
+      router.push('/search');
+    } else if (itemId === 'notifications') {
+      router.push('/notifications');
+    } else if (itemId === 'settings') {
+      router.push('/settings');
+    }
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen} side='left'>
-      <SheetTrigger>
-        <Button>Open Navigation</Button>
+    <Sheet open={open} onOpenChange={setOpen} side="left">
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          icon={{ family: 'Feather', name: 'menu' }}
+          style={styles.headerButton}
+        />
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
@@ -57,9 +77,7 @@ export default function SettingsScreen() {
                 style={[
                   styles.navigationItem,
                   {
-                    backgroundColor: isActive
-                      ? `${textColor}10`
-                      : 'transparent',
+                    backgroundColor: isActive ? `${textColor}10` : 'transparent',
                     borderColor,
                   },
                 ]}
@@ -68,7 +86,7 @@ export default function SettingsScreen() {
                 <Icon
                   family='MaterialCommunityIcons'
                   name={item.icon.name}
-                  size={20}
+                  size={24}
                   color={isActive ? textColor : mutedColor}
                 />
                 <Text
@@ -89,21 +107,26 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  navigationContainer: {
-    padding: 16,
-    gap: 8,
-  },
-  navigationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  navigationText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});
+    headerButton: {
+      marginHorizontal: 10,
+      marginLeft: 0,
+      marginRight: 0,
+    },
+    navigationContainer: {
+      padding: 16,
+      gap: 8,
+    },
+    navigationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    navigationText: {
+      fontSize: 16,
+      fontWeight: '500',
+    },
+  });

@@ -1,7 +1,9 @@
-import { useRouter } from 'expo-router';
+import { Button } from '@/components/ui/button';
+import SheetNavigation from '@/modules/home/components/sheethome';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import CreatePostModal from '../../../components/CreatePostModal';
 import { useAuthStore } from '../../../stores/authStore';
 
@@ -12,14 +14,13 @@ export default function HomeScreen() {
   const [isCreatePostVisible, setIsCreatePostVisible] = useState(false);
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
-  console.log(`[${timestamp}] [HomeScreen] Rendering component`, { userId: user?.id, hasSession: !!session, authLoading, isCreatePostVisible });
-
-  // Log component mount and state
   useEffect(() => {
-    console.log(`[${timestamp}] [HomeScreen] Component mounted`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null, authLoading });
+    console.log(`[${timestamp}] [HomeScreen] Component mounted`, {
+      session: session ? { userId: session.user?.id, email: session.user?.email } : null,
+      authLoading,
+    });
   }, []);
 
-  // Handle errors
   useEffect(() => {
     if (error) {
       console.log(`[${timestamp}] [HomeScreen] Error occurred`, { error: error.message });
@@ -38,44 +39,60 @@ export default function HomeScreen() {
     }
   };
 
-  if (authLoading) {
-    console.log(`[${timestamp}] [HomeScreen] Rendering loading state`);
-    return <Text>{t('loading')}</Text>;
-  }
-
   return (
-    <View style={styles.container}>
-      {user ? (
-        <>
-          <Text style={styles.welcome}>
-            {t('home.welcome', { name: user.user_metadata?.name || 'User' })}
-          </Text>
-          <Button 
-            title={t('home.createPost')} 
-            onPress={() => {
-              console.log(`[${timestamp}] [HomeScreen] Create post button pressed`);
-              setIsCreatePostVisible(true);
-            }} 
-          />
-          <Button 
-            title={t('home.signOut')} 
-            onPress={() => {
-              console.log(`[${timestamp}] [HomeScreen] Sign-out button pressed`);
-              handleSignOut();
-            }} 
-          />
-          <CreatePostModal
-            visible={isCreatePostVisible}
-            onClose={() => {
-              console.log(`[${timestamp}] [HomeScreen] Closing CreatePostModal`);
-              setIsCreatePostVisible(false);
-            }}
-          />
-        </>
-      ) : (
-        <Text>{t('home.noUser')}</Text>
-      )}
-    </View>
+    <>
+      <Stack.Screen
+        options={{
+          title: t('tabs.home'),
+          headerShown: true,
+          headerLeft: () => (
+            <SheetNavigation />
+          ),
+          headerRight: () => (
+            <Button
+              variant="ghost"
+              size="icon"
+              icon={{ family: 'Feather', name: 'search' }}
+              onPress={() => {
+                console.log(`[${timestamp}] [HomeScreen] Search button pressed`);
+                router.push('/search');
+              }}
+              style={styles.headerButton}
+            />
+          ),
+        }}
+      />
+
+      <View style={styles.container}>
+        {user ? (
+          <>
+            <Button
+              label={t('home.createPost')}
+              onPress={() => {
+                console.log(`[${timestamp}] [HomeScreen] Create post button pressed`);
+                setIsCreatePostVisible(true);
+              }}
+            />
+            <Button
+              label={t('home.signOut')}
+              onPress={() => {
+                console.log(`[${timestamp}] [HomeScreen] Sign-out button pressed`);
+                handleSignOut();
+              }}
+            />
+            <CreatePostModal
+              visible={isCreatePostVisible}
+              onClose={() => {
+                console.log(`[${timestamp}] [HomeScreen] Closing CreatePostModal`);
+                setIsCreatePostVisible(false);
+              }}
+            />
+          </>
+        ) : (
+          <Text style={styles.welcome}>{t('home.welcome')}</Text>
+        )}
+      </View>
+    </>
   );
 }
 
@@ -90,5 +107,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+  },
+  headerButton: {
+    marginHorizontal: 10,
+    marginLeft: 0,
+    marginRight: 0,
+  },
+  navigationContainer: {
+    padding: 16,
+    gap: 8,
+  },
+  navigationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  navigationText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

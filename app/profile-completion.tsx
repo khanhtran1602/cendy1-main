@@ -5,12 +5,11 @@ import { MediaAsset } from '@/components/ui/media-picker';
 import { ScreenLayout } from '@/components/ui/screen-layout';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { compressIfNeeded } from '@/lib/media/manip';
 import { openCropper } from '@/lib/media/picker';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { useUserSettingsStore } from '@/stores/userSettingsStore';
+import { useUserStore } from '@/stores/userStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image as ExpoImage } from 'expo-image';
@@ -33,7 +32,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function ProfileCompletionScreen() {
   const { session, user } = useAuthStore();
-  const { fetchUserInfo } = useUserSettingsStore();
+  const { fetchUserInfo } = useUserStore();
   const router = useRouter();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -41,7 +40,6 @@ export default function ProfileCompletionScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<MediaAsset | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const backgroundColor = useThemeColor({}, 'background');
 
   console.log(`[${timestamp}] [ProfileCompletionScreen] Rendering component`, { userId: user?.id, hasSession: !!session });
 
@@ -95,70 +93,102 @@ export default function ProfileCompletionScreen() {
   });
 
   // Handle photo selection with cropping, compression, and prefetching
-  const handlePhotoSelection = async (assets: MediaAsset[]) => {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Photo selected`, { assets });
-    const photo = assets[0] || null;
+// Handle photo selection with cropping, compression, uploading, and prefetching
+const handlePhotoSelection = async (assets: MediaAsset[]) => {
+  console.log(`[${timestamp}] [ProfileCompletionScreen] Photo selected`, { assets });
+  const photo = assets[0] || null;
+  
+  if (!photo) {
+    setSelectedPhoto(null);
+    setValue('avatar_url', '');
+    return;
+  }
+
+  if (!session?.user?.id) {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] No user ID available`);
+    setMediaError(t('error.noUserId'));
+    return;
+  }
+
+  setIsProcessingImage(true);
+  setMediaError(null);
+
+  try {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Starting image processing`);
     
-    if (!photo) {
-      setSelectedPhoto(null);
-      setValue('avatar_url', '');
-      return;
-    }
+    // Step 1: Open cropper
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Opening cropper`);
+    const croppedImage = await openCropper({
+      imageUri: photo.uri,
+      shape: 'circle',
+      aspectRatio: 1 / 1,
+    });
 
-    setIsProcessingImage(true);
-    setMediaError(null);
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image cropped`, { croppedImage });
 
-    try {
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Starting image processing`);
-      
-      // Step 1: Open cropper
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Opening cropper`);
-      const croppedImage = await openCropper({
-        imageUri: photo.uri,
-        shape: 'circle',
-        aspectRatio: 1 / 1,
+    // Step 2: Compress the cropped image
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Compressing image`);
+    const compressedImage = await compressIfNeeded(croppedImage, 1000000);
+
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image compressed`, { 
+      originalSize: croppedImage.size,
+      compressedSize: compressedImage.size 
+    });
+
+    // Step 3: Upload to Supabase storage
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Uploading to Supabase storage`);
+    const filePath = `avatars/${session.user.id}/avatar.jpg`;
+    const { data, error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, compressedImage.path, {
+        contentType: 'image/jpeg',
+        upsert: true, // Overwrite if exists
       });
 
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Image cropped`, { croppedImage });
-
-      // Step 2: Compress the cropped image
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Compressing image`);
-      const compressedImage = await compressIfNeeded(croppedImage, 1000000);
-
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Image compressed`, { 
-        originalSize: croppedImage.size,
-        compressedSize: compressedImage.size 
-      });
-
-      // Step 3: Prefetch the image to prevent flicker
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetching image`);
-      await ExpoImage.prefetch(compressedImage.path);
-
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Image prefetched successfully`);
-
-      // Step 4: Update state with processed image
-      const processedAsset: MediaAsset = {
-        id: `processed_avatar_${Date.now()}`,
-        uri: compressedImage.path,
-        type: 'image',
-        width: compressedImage.width,
-        height: compressedImage.height,
-        filename: `avatar_${Date.now()}.jpg`,
-        fileSize: compressedImage.size,
-      };
-
-      setSelectedPhoto(processedAsset);
-      setValue('avatar_url', processedAsset.uri);
-      
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing completed`, { processedAsset });
-
-    } catch (error) {
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing error`, { error });
-      setMediaError(error instanceof Error ? error.message : 'Failed to process image');
-    } finally {
-      setIsProcessingImage(false);
+    if (uploadError) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Upload error`, { error: uploadError.message });
+      throw uploadError;
     }
-  };
+
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image uploaded`, { filePath });
+
+    // Step 4: Get the public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    const avatarUrl = publicUrlData.publicUrl;
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Public URL generated`, { avatarUrl });
+
+    // Step 5: Prefetch the image to prevent flicker
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetching image`);
+    await ExpoImage.prefetch(avatarUrl);
+
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image prefetched successfully`);
+
+    // Step 6: Update state with processed image
+    const processedAsset: MediaAsset = {
+      id: `processed_avatar_${Date.now()}`,
+      uri: avatarUrl,
+      type: 'image',
+      width: compressedImage.width,
+      height: compressedImage.height,
+      filename: `avatar_${Date.now()}.jpg`,
+      fileSize: compressedImage.size,
+    };
+
+    setSelectedPhoto(processedAsset);
+    setValue('avatar_url', avatarUrl);
+    
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing completed`, { processedAsset });
+
+  } catch (error) {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing error`, { error });
+    setMediaError(error instanceof Error ? error.message : 'Failed to process image');
+  } finally {
+    setIsProcessingImage(false);
+  }
+};
 
   // Handle photo selection directly using ImagePicker
   const handleAvatarPress = async () => {

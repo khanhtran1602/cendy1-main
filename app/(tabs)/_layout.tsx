@@ -30,6 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chats/index"
         options={{
+          headerShown: true,
           title: t('tabs.chats'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="chat" size={size} color={color} />
@@ -42,6 +43,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings/index"
         options={{
+          headerShown: true,
           title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="cog" size={size} color={color} />

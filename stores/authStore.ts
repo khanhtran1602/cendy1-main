@@ -5,21 +5,14 @@ import * as WebBrowser from 'expo-web-browser';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { useUserSettingsStore } from './userSettingsStore';
+import { useUserStore } from './userStore';
 
-interface Profile {
-  display_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  need_profile_complete: boolean;
-}
 
 interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
   error: Error | null;
-  profile: Profile | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   getSession: () => Promise<Session | null>;
@@ -41,7 +34,6 @@ export const useAuthStore = create<AuthState>((set) => {
     user: null,
     loading: true,
     error: null,
-    profile: null,
     initialize: async () => {
       log('Initializing session');
       try {
@@ -54,12 +46,10 @@ export const useAuthStore = create<AuthState>((set) => {
         }
         console.log(`[${timestamp}] [AuthStore] Initial session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
         if (session) {
-          console.log(`[${timestamp}] [AuthStore] Fetching user info for session`);
-          await useUserSettingsStore.getState().fetchUserInfo();
           set({ session, user: session.user, loading: false, error: null });
           console.log(`[${timestamp}] [AuthStore] Session and user set`, { userId: session.user?.id });
         } else {
-          set({ session: null, user: null, profile: null, loading: false });
+          set({ session: null, user: null, loading: false});
           console.log(`[${timestamp}] [AuthStore] No session, cleared state`);
         }
       } catch (err) {
@@ -140,9 +130,9 @@ export const useAuthStore = create<AuthState>((set) => {
           throw error;
         }
         console.log(`[${timestamp}] [AuthStore] Sign-out successful`);
-        set({ session: null, user: null, profile: null, loading: false, error: null });
+        set({ session: null, user: null, loading: false, error: null });
         console.log(`[${timestamp}] [AuthStore] Clearing user settings`);
-        useUserSettingsStore.setState({ college: null, display_name: null, username: null, avatar_url: null });
+        useUserStore.setState({ college: null, display_name: null, username: null, avatar_url: null });
       } catch (err) {
         console.log(`[${timestamp}] [AuthStore] Sign-out error`, { error: err instanceof Error ? err.message : 'Unknown error' });
         set({ loading: false, error: err instanceof Error ? err : new Error(t('error.signOut')) });
@@ -158,10 +148,6 @@ export const useAuthStore = create<AuthState>((set) => {
           throw error;
         }
         console.log(`[${timestamp}] [AuthStore] Session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
-        if (session) {
-          console.log(`[${timestamp}] [AuthStore] Fetching user info for session`);
-          await useUserSettingsStore.getState().fetchUserInfo();
-        }
         set({ session, user: session?.user ?? null, loading: false, error: null });
         console.log(`[${timestamp}] [AuthStore] Session state updated`, { hasSession: !!session });
         return session;
