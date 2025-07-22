@@ -1,22 +1,22 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MediaAsset } from '@/components/ui/media-picker';
 import { ScreenLayout } from '@/components/ui/screen-layout';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { compressIfNeeded } from '@/lib/media/manip';
 import { openCropper } from '@/lib/media/picker';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserStore } from '@/stores/userStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
@@ -35,32 +35,33 @@ export default function ProfileCompletionScreen() {
   const { fetchUserInfo } = useUserStore();
   const router = useRouter();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
-  const [selectedPhoto, setSelectedPhoto] = useState<MediaAsset | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
+  // Theme colors
+  const borderColor = useThemeColor({}, 'border');
+  const mutedColor = useThemeColor({}, 'textMuted');
+  const errorColor = useThemeColor({}, 'red');
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const overlayBackgroundColor = useThemeColor({ light: 'rgba(0, 0, 0, 0.7)', dark: 'rgba(255, 255, 255, 0.7)' }, 'background');
+
   console.log(`[${timestamp}] [ProfileCompletionScreen] Rendering component`, { userId: user?.id, hasSession: !!session });
 
-  // Memoize defaultValues to prevent form reinitialization
-  const defaultValues = useMemo(
-    () => ({
-      display_name: user?.user_metadata?.name || '',
-      username: '',
-      avatar_url: user?.user_metadata?.avatar_url || '',
-    }),
-    [user?.user_metadata?.name, user?.user_metadata?.avatar_url]
-  );
-
+  // Empty defaultValues to prevent form prepopulation
   const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    defaultValues,
+    defaultValues: {
+      display_name: '',
+      username: '',
+      avatar_url: '',
+    },
   });
 
   const currentAvatarUrl = watch('avatar_url');
-
-  console.log(`[${timestamp}] [ProfileCompletionScreen] Form initialized`, { defaultValues });
+  console.log(`[${timestamp}] [ProfileCompletionScreen] Form initialized`);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -92,103 +93,163 @@ export default function ProfileCompletionScreen() {
     },
   });
 
-  // Handle photo selection with cropping, compression, and prefetching
-// Handle photo selection with cropping, compression, uploading, and prefetching
-const handlePhotoSelection = async (assets: MediaAsset[]) => {
-  console.log(`[${timestamp}] [ProfileCompletionScreen] Photo selected`, { assets });
-  const photo = assets[0] || null;
-  
-  if (!photo) {
-    setSelectedPhoto(null);
-    setValue('avatar_url', '');
-    return;
-  }
-
-  if (!session?.user?.id) {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] No user ID available`);
-    setMediaError(t('error.noUserId'));
-    return;
-  }
-
-  setIsProcessingImage(true);
-  setMediaError(null);
-
-  try {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Starting image processing`);
+  // Handle photo selection with cropping, compression, uploading, and prefetching
+  const handlePhotoSelection = async (assets: ImagePicker.ImagePickerAsset[]) => {
+    console.log(`[${timestamp}] [ProfileCompletionScreen] Photo selected`, { assets });
+    const photo = assets[0] || null;
     
-    // Step 1: Open cropper
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Opening cropper`);
-    const croppedImage = await openCropper({
-      imageUri: photo.uri,
-      shape: 'circle',
-      aspectRatio: 1 / 1,
-    });
-
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image cropped`, { croppedImage });
-
-    // Step 2: Compress the cropped image
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Compressing image`);
-    const compressedImage = await compressIfNeeded(croppedImage, 1000000);
-
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image compressed`, { 
-      originalSize: croppedImage.size,
-      compressedSize: compressedImage.size 
-    });
-
-    // Step 3: Upload to Supabase storage
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Uploading to Supabase storage`);
-    const filePath = `avatars/${session.user.id}/avatar.jpg`;
-    const { data, error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, compressedImage.path, {
-        contentType: 'image/jpeg',
-        upsert: true, // Overwrite if exists
-      });
-
-    if (uploadError) {
-      console.log(`[${timestamp}] [ProfileCompletionScreen] Upload error`, { error: uploadError.message });
-      throw uploadError;
+    if (!photo) {
+      setSelectedPhoto(null);
+      setValue('avatar_url', '');
+      return;
     }
-
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image uploaded`, { filePath });
-
-    // Step 4: Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    const avatarUrl = publicUrlData.publicUrl;
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Public URL generated`, { avatarUrl });
-
-    // Step 5: Prefetch the image to prevent flicker
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetching image`);
-    await ExpoImage.prefetch(avatarUrl);
-
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image prefetched successfully`);
-
-    // Step 6: Update state with processed image
-    const processedAsset: MediaAsset = {
-      id: `processed_avatar_${Date.now()}`,
-      uri: avatarUrl,
-      type: 'image',
-      width: compressedImage.width,
-      height: compressedImage.height,
-      filename: `avatar_${Date.now()}.jpg`,
-      fileSize: compressedImage.size,
-    };
-
-    setSelectedPhoto(processedAsset);
-    setValue('avatar_url', avatarUrl);
-    
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing completed`, { processedAsset });
-
-  } catch (error) {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing error`, { error });
-    setMediaError(error instanceof Error ? error.message : 'Failed to process image');
-  } finally {
-    setIsProcessingImage(false);
-  }
-};
+  
+    if (!session?.user?.id) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] No user ID available`);
+      setMediaError(t('error.noUserId'));
+      return;
+    }
+  
+    setIsProcessingImage(true);
+    setMediaError(null);
+  
+    try {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Starting image processing`);
+      
+      // Step 0: Delete previous avatar if it exists
+      const currentAvatarUrl = watch('avatar_url');
+      if (currentAvatarUrl) {
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Deleting previous avatar`);
+        try {
+          // Extract file path from current avatar URL
+          const urlParts = currentAvatarUrl.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const filePath = `${session.user.id}/${fileName}`;
+          
+          const { error: deleteError } = await supabase.storage
+            .from('avatars')
+            .remove([filePath]);
+            
+          if (deleteError) {
+            console.log(`[${timestamp}] [ProfileCompletionScreen] Failed to delete previous avatar`, { error: deleteError });
+            // Continue anyway - don't fail the upload because of cleanup failure
+          } else {
+            console.log(`[${timestamp}] [ProfileCompletionScreen] Previous avatar deleted successfully`);
+          }
+        } catch (deleteError) {
+          console.log(`[${timestamp}] [ProfileCompletionScreen] Error during avatar cleanup`, { deleteError });
+          // Continue anyway
+        }
+      }
+      
+      // Step 1: Open cropper
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Opening cropper`);
+      const croppedImage = await openCropper({
+        imageUri: photo.uri,
+        shape: 'circle',
+        aspectRatio: 1 / 1,
+      });
+  
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image cropped`, { croppedImage });
+  
+      // Step 2: Compress the cropped image
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Compressing image`);
+      const compressedImage = await compressIfNeeded(croppedImage, 1000000);
+  
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image compressed`, { 
+        originalSize: croppedImage.size,
+        compressedSize: compressedImage.size 
+      });
+  
+      // Step 3: Create file object for upload
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Preparing file for upload`);
+      
+      // Create a file object that Supabase can handle
+      const fileUri = compressedImage.path;
+      
+      // For React Native, we need to create a file-like object
+      const file = {
+        uri: fileUri,
+        type: 'image/jpeg',
+        name: `avatar_${Date.now()}.jpg`
+      };
+      
+      console.log(`[${timestamp}] [ProfileCompletionScreen] File prepared`, { file });
+  
+      // Step 4: Upload to Supabase storage with unique filename
+      const fileName = file.name;
+      const filePath = `${session.user.id}/${fileName}`;
+      
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Uploading to Supabase storage`);
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file as any, {
+          contentType: 'image/jpeg',
+          upsert: false, // Changed to false since we're using unique filenames
+        });
+  
+      if (uploadError) {
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Upload error`, { error: uploadError.message });
+        throw uploadError;
+      }
+  
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image uploaded successfully`, { 
+        filePath, 
+        uploadedData: data 
+      });
+  
+      // Step 5: Get the public URL from Supabase
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+  
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Public URL generated`, { publicUrl });
+  
+      // Step 6: Verify the upload by checking if file exists
+      const { data: fileData, error: listError } = await supabase.storage
+        .from('avatars')
+        .list(session.user.id);
+      
+      if (listError) {
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Error verifying upload`, { error: listError });
+      } else {
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Files in bucket`, { files: fileData });
+      }
+  
+      // Step 7: Prefetch the image using the public URL
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetching image`);
+      try {
+        await ExpoImage.prefetch(publicUrl);
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Image prefetched successfully`);
+      } catch (prefetchError) {
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Prefetch failed, continuing anyway`, { prefetchError });
+      }
+  
+      // Step 8: Update state with processed image using public URL
+      const processedAsset: ImagePicker.ImagePickerAsset = {
+        uri: publicUrl,
+        width: compressedImage.width,
+        height: compressedImage.height,
+        fileName: fileName,
+        fileSize: compressedImage.size,
+        type: 'image',
+      };
+  
+      setSelectedPhoto(processedAsset);
+      setValue('avatar_url', publicUrl);
+      
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing completed`, { 
+        processedAsset,
+        publicUrl 
+      });
+  
+    } catch (error) {
+      console.log(`[${timestamp}] [ProfileCompletionScreen] Image processing error`, { error });
+      setMediaError(error instanceof Error ? error.message : 'Failed to process image');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
 
   // Handle photo selection directly using ImagePicker
   const handleAvatarPress = async () => {
@@ -207,29 +268,13 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const newAsset: MediaAsset = {
-          id: `avatar_${Date.now()}`,
-          uri: asset.uri,
-          type: 'image',
-          width: asset.width,
-          height: asset.height,
-          filename: asset.fileName || undefined,
-          fileSize: asset.fileSize,
-        };
-        console.log(`[${timestamp}] [ProfileCompletionScreen] Image selected`, { newAsset });
-        await handlePhotoSelection([newAsset]);
+        console.log(`[${timestamp}] [ProfileCompletionScreen] Image selected`, { asset: result.assets[0] });
+        await handlePhotoSelection(result.assets);
       }
     } catch (error) {
       console.log(`[${timestamp}] [ProfileCompletionScreen] Error picking image`, { error });
-      handleMediaError('Failed to pick image from gallery');
+      setMediaError('Failed to pick image from gallery');
     }
-  };
-
-  // Handle media picker error
-  const handleMediaError = (error: string) => {
-    console.log(`[${timestamp}] [ProfileCompletionScreen] Media picker error`, { error });
-    setMediaError(error);
   };
 
   const onSubmit = (data: ProfileFormData) => {
@@ -262,13 +307,13 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
               <AvatarImage source={{ uri: avatarImageSource }} />
             ) : (
               <AvatarFallback>
-                <Camera size={32} color="#666" />
+                <Camera size={32} color={mutedColor} />
               </AvatarFallback>
             )}
           </Avatar>
           {isProcessingImage && (
-            <View style={styles.processingOverlay}>
-              <Text variant="caption" style={styles.processingText}>
+            <View style={[styles.processingOverlay, { backgroundColor: overlayBackgroundColor }]}>
+              <Text variant="caption" style={[styles.processingText, { color: textColor }]}>
                 Processing...
               </Text>
             </View>
@@ -283,7 +328,8 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
             {t('completeProfile.setNewPhoto', { defaultValue: 'Set New Photo' })}
           </Text>
         </Pressable>
-     </View>
+      </View>
+
       {/* Form Fields */}
       <Controller
         control={control}
@@ -346,7 +392,7 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
         )}
       />
       {mediaError && (
-        <Text variant="caption" style={styles.error}>
+        <Text variant="caption" style={[styles.error, { color: errorColor }]}>
           {mediaError}
         </Text>
       )}
@@ -357,7 +403,7 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
         }}
         disabled={updateProfileMutation.isPending || isProcessingImage}
         loading={updateProfileMutation.isPending}
-        variant="default"
+        variant="secondary"
         style={styles.submitButton}
       >
         {updateProfileMutation.isPending ? t('profileCompletion.submitting') : t('profileCompletion.submit')}
@@ -368,16 +414,16 @@ const handlePhotoSelection = async (assets: MediaAsset[]) => {
 
 const styles = StyleSheet.create({
   title: {
-    marginBottom: 32, // Increased for better separation
+    marginBottom: 32,
     textAlign: 'center',
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 32, // Consistent with title
+    marginBottom: 32,
   },
   avatarPressable: {
     position: 'relative',
-    shadowColor: '#000',
+    shadowColor: '#000', // Kept as is since shadowColor isn't in theme, but could be added to colors.ts if needed
     shadowOffset: {
       width: 0,
       height: 2,
@@ -390,8 +436,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   avatar: {
-    borderWidth: 3,
-    borderColor: '#e0e0e0',
+    borderWidth: 3
   },
   processingOverlay: {
     position: 'absolute',
@@ -399,13 +444,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   processingText: {
-    color: 'white',
     fontSize: 12,
     textAlign: 'center',
   },
@@ -415,20 +458,19 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 8, // Consistent spacing between inputs
+    marginBottom: 8,
   },
   note: {
-    marginBottom: 32, // Aligned with inputContainer
+    marginBottom: 32,
     textAlign: 'left',
     marginLeft: 14,
   },
   submitButton: {
     width: '100%',
-    marginTop: 20, // Slightly larger to separate the button from the form
+    marginTop: 20,
   },
   error: {
-    color: 'red',
-    marginBottom: 16, // Consistent with other elements
+    marginBottom: 16,
     textAlign: 'center',
   },
 });
