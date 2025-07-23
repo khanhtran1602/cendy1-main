@@ -41,10 +41,8 @@ export default function ProfileCompletionScreen() {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // Theme colors
-  const borderColor = useThemeColor({}, 'border');
   const mutedColor = useThemeColor({}, 'textMuted');
   const errorColor = useThemeColor({}, 'red');
-  const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const overlayBackgroundColor = useThemeColor({ light: 'rgba(0, 0, 0, 0.7)', dark: 'rgba(255, 255, 255, 0.7)' }, 'background');
 
@@ -264,7 +262,6 @@ export default function ProfileCompletionScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: false,
-        quality: 1,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {

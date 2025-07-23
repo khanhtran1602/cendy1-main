@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useRouter } from 'expo-router';
@@ -24,11 +24,10 @@ export default function SheetNavigation() {
 
   const navigationItems = [
     { id: 'home', label: 'Home', icon: { family: 'MaterialCommunityIcons', name: 'home' } },
-    { id: 'profile', label: 'Profile', icon: { family: 'MaterialCommunityIcons', name: 'account' } },
-    { id: 'messages', label: 'Messages', icon: { family: 'MaterialCommunityIcons', name: 'email' } },
-    { id: 'search', label: 'Search', icon: { family: 'MaterialCommunityIcons', name: 'magnify' } },
-    { id: 'notifications', label: 'Notifications', icon: { family: 'MaterialCommunityIcons', name: 'bell' } },
-    { id: 'settings', label: 'Settings', icon: { family: 'MaterialCommunityIcons', name: 'cog' } },
+    { id: 'campus-talk', label: 'Campus Talk', icon: { family: 'MaterialCommunityIcons', name: 'chat' } },
+    { id: 'campus-crush', label: 'Campus Crush', icon: { family: 'MaterialCommunityIcons', name: 'heart' } },
+    { id: 'nation-talk', label: 'Nation Talk', icon: { family: 'MaterialCommunityIcons', name: 'forum' } },
+    { id: 'nation-crush', label: 'Nation Crush', icon: { family: 'MaterialCommunityIcons', name: 'heart-multiple' } },
   ];
 
   const handleItemPress = (itemId: string) => {
@@ -37,16 +36,14 @@ export default function SheetNavigation() {
     // Navigate to corresponding screen
     if (itemId === 'home') {
       router.push('/(tabs)/home');
-    } else if (itemId === 'profile') {
-      router.push('/profile');
-    } else if (itemId === 'messages') {
-      router.push('/messages');
-    } else if (itemId === 'search') {
-      router.push('/search');
-    } else if (itemId === 'notifications') {
-      router.push('/notifications');
-    } else if (itemId === 'settings') {
-      router.push('/settings');
+    } else if (itemId === 'campus-talk') {
+      router.push('/channels/campus-talk');
+    } else if (itemId === 'campus-crush') {
+      router.push('/channels/campus-crush');
+    } else if (itemId === 'nation-talk') {
+      router.push('/channels/nation-talk');
+    } else if (itemId === 'nation-crush') {
+      router.push('/channels/nation-crush');
     }
   };
 
@@ -107,26 +104,26 @@ export default function SheetNavigation() {
 }
 
 const styles = StyleSheet.create({
-    headerButton: {
-      marginHorizontal: 10,
-      marginLeft: 0,
-      marginRight: 0,
-    },
-    navigationContainer: {
-      padding: 16,
-      gap: 8,
-    },
-    navigationItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: 'transparent',
-    },
-    navigationText: {
-      fontSize: 16,
-      fontWeight: '500',
-    },
-  });
+  headerButton: {
+    marginHorizontal: 10,
+    marginLeft: 0,
+    marginRight: 0,
+  },
+  navigationContainer: {
+    padding: 16,
+    gap: 8,
+  },
+  navigationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  navigationText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});

@@ -8,7 +8,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
-import { useUserSettingsStore } from '../stores/userSettingsStore';
+import { useUserStore } from '../stores/userStore';
 
 // Define form schema
 const postSchema = z.object({
@@ -32,7 +32,7 @@ function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { college } = useUserSettingsStore();
+  const { college } = useUserStore();
   const [channelPickerVisible, setChannelPickerVisible] = useState(false);
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
