@@ -1,17 +1,17 @@
+import { Composer } from '@/components/composer';
 import { Button } from '@/components/ui/button';
 import SheetNavigation from '@/modules/home/components/sheethome';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import CreatePostModal from '../../../components/CreatePostModal';
+import { Alert, Modal, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '../../../stores/authStore';
 
 export default function HomeScreen() {
   const { session, user, loading: authLoading, error, signOut } = useAuthStore();
   const router = useRouter();
   const { t } = useTranslation();
-  const [isCreatePostVisible, setIsCreatePostVisible] = useState(false);
+  const [isComposerVisible, setIsComposerVisible] = useState(false);
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
   useEffect(() => {
@@ -39,6 +39,49 @@ export default function HomeScreen() {
     }
   };
 
+  const handlePost = async (content: string, topic?: string) => {
+    console.log(`[${timestamp}] [HomeScreen] Creating post`, { 
+      contentLength: content.length, 
+      topic: topic || 'none' 
+    });
+    
+    try {
+      // TODO: Implement post creation logic here
+      // Example: await createPost({ content, topic });
+      
+      console.log(`[${timestamp}] [HomeScreen] Post created successfully`);
+      setIsComposerVisible(false);
+      
+      // Show success message
+      Alert.alert(t('success.title', 'Success'), t('post.created', 'Post created successfully!'));
+    } catch (err) {
+      console.log(`[${timestamp}] [HomeScreen] Post creation error`, { error: (err as Error).message });
+      Alert.alert(t('error.title'), t('error.createPost', 'Failed to create post'));
+    }
+  };
+
+  const handleMediaSelect = (type: 'camera' | 'photo' | 'microphone') => {
+    console.log(`[${timestamp}] [HomeScreen] Media selected`, { type });
+    
+    // TODO: Implement media selection logic
+    switch (type) {
+      case 'camera':
+        // Open camera
+        break;
+      case 'photo':
+        // Open photo library
+        break;
+      case 'microphone':
+        // Start voice recording
+        break;
+    }
+  };
+
+  const handleCancelComposer = () => {
+    console.log(`[${timestamp}] [HomeScreen] Composer cancelled`);
+    setIsComposerVisible(false);
+  };
+
   return (
     <>
       <Stack.Screen
@@ -55,7 +98,7 @@ export default function HomeScreen() {
               icon={{ family: 'Feather', name: 'search' }}
               onPress={() => {
                 console.log(`[${timestamp}] [HomeScreen] Search button pressed`);
-                router.push('/search');
+                router.push('/(tabs)/home/index copy');
               }}
               style={styles.headerButton}
             />
@@ -70,7 +113,7 @@ export default function HomeScreen() {
               label={t('home.createPost')}
               onPress={() => {
                 console.log(`[${timestamp}] [HomeScreen] Create post button pressed`);
-                setIsCreatePostVisible(true);
+                setIsComposerVisible(true);
               }}
             />
             <Button
@@ -80,13 +123,20 @@ export default function HomeScreen() {
                 handleSignOut();
               }}
             />
-            <CreatePostModal
-              visible={isCreatePostVisible}
-              onClose={() => {
-                console.log(`[${timestamp}] [HomeScreen] Closing CreatePostModal`);
-                setIsCreatePostVisible(false);
-              }}
-            />
+            
+            {/* Composer Modal */}
+            <Modal
+              visible={isComposerVisible}
+              animationType="slide"
+              presentationStyle="pageSheet"
+              onRequestClose={handleCancelComposer}
+            >
+              <Composer
+                onCancel={handleCancelComposer}
+                onPost={handlePost}
+                onMediaSelect={handleMediaSelect}
+              />
+            </Modal>
           </>
         ) : (
           <Text style={styles.welcome}>{t('home.welcome')}</Text>

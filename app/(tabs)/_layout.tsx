@@ -15,7 +15,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="home/index"
+        name="home"
         options={{
           headerShown: false,
           title: t('tabs.home'),
@@ -28,9 +28,10 @@ export default function TabsLayout() {
         })}
       />
       <Tabs.Screen
-        name="chats/index"
+        name="chats"
         options={{
-          headerShown: true,
+          headerShown: false,
+          tabBarBadge: 2,
           title: t('tabs.chats'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="chat" size={size} color={color} />
@@ -41,9 +42,9 @@ export default function TabsLayout() {
         })}
       />
       <Tabs.Screen
-        name="settings/index"
+        name="settings"
         options={{
-          headerShown: true,
+          headerShown: false,
           title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="cog" size={size} color={color} />
