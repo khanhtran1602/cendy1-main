@@ -1,6 +1,5 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { BORDER_RADIUS, CORNERS, FONT_SIZE, HEIGHT } from '@/theme/globals';
-import { ChevronDown } from 'lucide-react-native';
 import React, {
   Children,
   cloneElement,
@@ -184,15 +183,6 @@ export function ComboboxTrigger({
       activeOpacity={0.7}
     >
       <View style={styles.triggerContent}>{children}</View>
-      <ChevronDown
-        size={20}
-        color={mutedColor}
-        strokeWidth={2}
-        style={[
-          styles.chevron,
-          { transform: [{ rotate: isOpen ? '180deg' : '0deg' }] },
-        ]}
-      />
     </TouchableOpacity>
   );
 }
@@ -561,16 +551,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   triggerContent: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
   valueText: {
     fontSize: FONT_SIZE,
     flex: 1,
-  },
-  chevron: {
-    marginLeft: 8,
   },
   overlay: {
     flex: 1,

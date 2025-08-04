@@ -1,13 +1,25 @@
+import { POST_IMG_MAX } from '@/lib/constants'
 import {
-    cacheDirectory,
-    copyAsync,
-    deleteAsync,
-    getInfoAsync,
+  cacheDirectory,
+  copyAsync,
+  deleteAsync,
+  getInfoAsync,
 } from 'expo-file-system'
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator'
-import { Platform } from 'react-native'
+import { Platform, Image as RNImage } from 'react-native'
 import uuid from 'react-native-uuid'
 
+export function getImageDim(path: string): Promise<Dimensions> {
+  return new Promise((resolve, reject) => {
+    RNImage.getSize(
+      path,
+      (width, height) => {
+        resolve({width, height})
+      },
+      reject,
+    )
+  })
+}
 export interface Dimensions {
   width: number
   height: number
@@ -24,11 +36,6 @@ export type PickerImage = ImageMeta & {
   size: number
 }
 
-export const POST_IMG_MAX = {
-  width: 2000,
-  height: 2000,
-  size: 1000000,
-}
 
 export const isAndroid = Platform.OS === 'android'
 
