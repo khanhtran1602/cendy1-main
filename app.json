@@ -57,7 +57,8 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "react-native-compressor"
+      "react-native-compressor",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true

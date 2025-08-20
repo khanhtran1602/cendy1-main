@@ -8,7 +8,7 @@ import { Alert, Modal, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '../../../stores/authStore';
 
 export default function HomeScreen() {
-  const { session, user, loading: authLoading, error, signOut } = useAuthStore();
+  const { session, loading: authLoading, error, signOut } = useAuthStore();
   const router = useRouter();
   const { t } = useTranslation();
   const [isComposerVisible, setIsComposerVisible] = useState(false);
@@ -107,7 +107,7 @@ export default function HomeScreen() {
       />
 
       <View style={styles.container}>
-        {user ? (
+        {session ? (
           <>
             <Button
               label={t('home.createPost')}
@@ -132,9 +132,6 @@ export default function HomeScreen() {
               onRequestClose={handleCancelComposer}
             >
               <Composer
-                onCancel={handleCancelComposer}
-                onPost={handlePost}
-                onMediaSelect={handleMediaSelect}
               />
             </Modal>
           </>

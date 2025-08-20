@@ -1,20 +1,20 @@
 import { requireNativeModule, requireNativeViewManager } from 'expo-modules-core'
 import * as React from 'react'
 import {
-    Dimensions,
-    type LayoutChangeEvent,
-    type NativeSyntheticEvent,
-    Platform,
-    type StyleProp,
-    View,
-    type ViewStyle,
+  Dimensions,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  Platform,
+  type StyleProp,
+  View,
+  type ViewStyle,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { isIOS } from '@/platform/detection'
 import {
-    type BottomSheetState,
-    type BottomSheetViewProps,
+  type BottomSheetState,
+  type BottomSheetViewProps,
 } from './BottomSheet.types'
 import { BottomSheetPortalProvider, Context as PortalContext } from './BottomSheetPortal'
 

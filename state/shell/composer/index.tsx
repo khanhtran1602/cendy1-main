@@ -96,7 +96,7 @@ export interface ComposerOptsPostRef {
     college?: string // Initial college value
     channel?: string // Initial channel value
     topic?: string // Initial topic value
-    imageUris?: { uri: string; width: number; height: number; altText?: string }[] // Images to upload
+    imageUris?: { uri: string; width: number; height: number}[] // Images to upload
     videoUri?: { uri: string; width: number; height: number; video_duration?: number } // Video to upload
   }
 

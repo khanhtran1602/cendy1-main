@@ -1,13 +1,13 @@
 import React from 'react'
 import type {
-  AccessibilityProps,
-  GestureResponderEvent,
-  ScrollViewProps,
+    AccessibilityProps,
+    GestureResponderEvent,
+    ScrollViewProps,
 } from 'react-native'
 import { StyleProp, ViewStyle } from 'react-native'
 
 
-import { BottomSheetSnapPoint, BottomSheetViewProps } from '../bottom-sheet/src/BottomSheet.types'
+import { BottomSheetSnapPoint, BottomSheetViewProps } from '../../modules/bottom-sheet/src/BottomSheet.types'
 
 type ViewStyleProp = {
     style?: StyleProp<ViewStyle>

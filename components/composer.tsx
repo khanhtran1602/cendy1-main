@@ -1,5 +1,6 @@
 import { atoms as a } from '@/alf/atoms';
 import { native } from '@/alf/util/platform';
+import * as Prompt from '@/components/Prompt';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,17 +18,27 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { CHANNELS, PREDEFINED_TOPICS } from '@/lib/constants';
-import { isIOS } from '@/platform/detection';
-import { type ComposerOpts, useComposerControls } from '@/state/shell/composer';
+import { useIsKeyboardVisible } from '@/lib/hooks/useIsKeyboardVisible';
+import { useNonReactiveCallback } from '@/lib/hooks/useNonReactiveCallback';
+import { supabase } from '@/lib/supabase';
+import { isAndroid, isIOS } from '@/platform/detection';
+import { useDialogStateControlContext } from '@/state/dialogs';
+import { useModalControls } from '@/state/modals';
+import { type ComposerOpts, type OnPostSuccessData, useComposerControls } from '@/state/shell/composer';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserStore } from '@/stores/userStore';
 import { BORDER_RADIUS, FONT_SIZE } from '@/theme/globals';
 import { OpenCameraBtn } from '@/view/com/composer/photos/OpenCameraBtn'; // Import the OpenCameraBtn component
-import { NoVideoState, VideoState } from '@/view/com/composer/state/video';
+import { composerReducer, createComposerState, PostAction, type PostDraft } from '@/view/com/composer/state/composer';
+import { NoVideoState, processVideo, VideoState } from '@/view/com/composer/state/video';
 import { TextInputRef } from '@/view/com/composer/text-input/TextInput';
-import React, { useRef, useState } from 'react';
+import { clearThumbnailCache } from '@/view/com/composer/videos/VideoTranscodeBackdrop';
+import { useQueryClient } from '@tanstack/react-query';
+import { ImagePickerAsset } from 'expo-image-picker';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
@@ -46,7 +57,6 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 type CancelRef = {
   onPressCancel: () => void
 }
@@ -57,16 +67,332 @@ export const Composer= ({
   replyTo,
   onPost,
   onPostSuccess,
-  text,
+  text: initText,
   imageUris: initImageUris,
   videoUri: initVideoUri,
   cancelRef,
 }: Props & { cancelRef?: React.RefObject<CancelRef> }) => {
-  const {user} = useAuthStore()
-  const currentid = user!.id
+  const {session} = useAuthStore()
+  const queryClient = useQueryClient()
+  const currentid = session!.user.id
   const {closeComposer} = useComposerControls()
   const textInput = useRef<TextInputRef>(null)
+  const discardPromptControl = Prompt.usePromptControl()
 
+  const {closeAllDialogs} = useDialogStateControlContext()
+  const {closeAllModals} = useModalControls()
+
+  const [isKeyboardVisible] = useIsKeyboardVisible({iosUseWillEvents: true})
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishingStage, setPublishingStage] = useState('')
+  const [error, setError] = useState('')
+
+  const [composerState, composerDispatch] = useReducer(
+    composerReducer,
+    {
+      initImageUris,
+      initText,
+    },
+    createComposerState,
+  )
+  const post = composerState.post
+  const dispatch = useCallback(
+    (postAction: PostAction) => {
+      composerDispatch({
+        type: 'update_post',
+        postAction,
+      })
+    },
+    [],
+  )
+  const selectVideo = React.useCallback(
+    (asset: ImagePickerAsset) => {
+      const abortController = new AbortController()
+      composerDispatch({
+        type: 'update_post',
+        postAction: {
+          type: 'embed_add_video',
+          asset,
+          abortController,
+        },
+      })
+      processVideo(
+        asset,
+        videoAction => {
+          composerDispatch({
+            type: 'update_post',
+            postAction: {
+              type: 'embed_update_video',
+              videoAction,
+            },
+          })
+        },
+        supabase,
+        currentid,
+        abortController.signal,
+      )
+    },
+    [supabase, currentid, composerDispatch],
+  )
+
+  const onInitVideo = useNonReactiveCallback(() => {
+    if (initVideoUri) {
+      selectVideo(initVideoUri)
+    }
+  })
+
+  useEffect(() => {
+    onInitVideo()
+  }, [onInitVideo])
+
+  const clearVideo = React.useCallback(
+    () => {
+      composerDispatch({
+        type: 'update_post',
+        postAction: {
+          type: 'embed_remove_video',
+        },
+      })
+    },
+    [composerDispatch],
+  )
+
+  const [publishOnUpload, setPublishOnUpload] = useState(false)
+
+  const onClose = useCallback(() => {
+    closeComposer()
+    clearThumbnailCache(queryClient)
+  }, [closeComposer, queryClient])
+
+  const insets = useSafeAreaInsets()
+  const viewStyles = useMemo(
+    () => ({
+      paddingTop: isAndroid ? insets.top : 0,
+      paddingBottom:
+        // iOS - when keyboard is closed, keep the bottom bar in the safe area
+        (isIOS && !isKeyboardVisible) ||
+        // Android - Android >=35 KeyboardAvoidingView adds double padding when
+        // keyboard is closed, so we subtract that in the offset and add it back
+        // here when the keyboard is open
+        (isAndroid && isKeyboardVisible)
+          ? insets.bottom
+          : 0,
+    }),
+    [insets, isKeyboardVisible],
+  )
+
+  const onPressCancel = useCallback(() => {
+    if (
+      post.shortenedGraphemeLength > 0 ||
+      post.embed.media ||
+      post.embed.link
+    ) {
+      closeAllDialogs()
+      Keyboard.dismiss()
+      discardPromptControl.open()
+    } else {
+      onClose()
+    }
+  }, [post, closeAllDialogs, discardPromptControl, onClose])
+
+  useImperativeHandle(cancelRef, () => ({onPressCancel}))
+
+  // On Android, pressing Back should ask confirmation.
+  useEffect(() => {
+    if (!isAndroid) {
+      return
+    }
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (closeAllDialogs() || closeAllModals()) {
+          return true
+        }
+        onPressCancel()
+        return true
+      },
+    )
+    return () => {
+      backHandler.remove()
+    }
+  }, [onPressCancel, closeAllDialogs, closeAllModals])
+
+  const canPost =
+    post.shortenedGraphemeLength <= 500 &&
+    !isEmptyPost(post) &&
+    !(
+          post.embed.media?.type === 'video' &&
+          post.embed.media.video.status === 'error'
+        )
+
+  const onPressPublish = React.useCallback(async () => {
+    if (isPublishing) {
+      return
+    }
+
+    if (!canPost) {
+      return
+    }
+
+    if (
+      composerState.post.embed.media?.type === 'video' &&
+      composerState.post.embed.media.video.asset &&
+      composerState.post.embed.media.video.status !== 'done'
+    ) {
+      setPublishOnUpload(true)
+      return
+    }
+
+    setError('')
+    setIsPublishing(true)
+
+    let postUri: string | undefined
+    let postSuccessData: OnPostSuccessData
+    try {
+      console.log(`composer: posting...`)
+      postUri = (
+        await apilib.post(agent, queryClient, {
+          thread,
+          replyTo: replyTo?.uri,
+          onStateChange: setPublishingStage,
+          langs: toPostLanguages(langPrefs.postLanguage),
+        })
+      ).uris[0]
+
+      /*
+       * Wait for app view to have received the post(s). If this fails, it's
+       * ok, because the post _was_ actually published above.
+       */
+      try {
+        if (postUri) {
+          console.log(`composer: waiting for app view`)
+
+          const posts = await retry(
+            5,
+            _e => true,
+            async () => {
+              const res = await agent.app.bsky.unspecced.getPostThreadV2({
+                anchor: postUri!,
+                above: false,
+                below: thread.posts.length - 1,
+                branchingFactor: 1,
+              })
+              if (res.data.thread.length !== thread.posts.length) {
+                throw new Error(`composer: app view is not ready`)
+              }
+              if (
+                !res.data.thread.every(p =>
+                  AppBskyUnspeccedDefs.isThreadItemPost(p.value),
+                )
+              ) {
+                throw new Error(`composer: app view returned non-post items`)
+              }
+              return res.data.thread
+            },
+            1e3,
+          )
+          postSuccessData = {
+            replyToUri: replyTo?.uri,
+            posts,
+          }
+        }
+      } catch (waitErr: any) {
+        console.log(`composer: waiting for app view failed`, {
+          safeMessage: waitErr,
+        })
+      }
+    } catch (e: any) {
+      console.log(e, {
+        message: `Composer: create post failed`,
+        hasImages: thread.posts.some(p => p.embed.media?.type === 'images'),
+      })
+
+      let err = cleanError(e.message)
+      if (err.includes('not locate record')) {
+        err = _(
+          msg`We're sorry! The post you are replying to has been deleted.`,
+        )
+      } else if (e instanceof EmbeddingDisabledError) {
+        err = _(msg`This post's author has disabled quote posts.`)
+      }
+      setError(err)
+      setIsPublishing(false)
+      return
+    } finally {
+      if (postUri) {
+        let index = 0
+        for (let post of thread.posts) {
+          logEvent('post:create', {
+            imageCount:
+              post.embed.media?.type === 'images'
+                ? post.embed.media.images.length
+                : 0,
+            isReply: index > 0 || !!replyTo,
+            isPartOfThread: thread.posts.length > 1,
+            hasLink: !!post.embed.link,
+            hasQuote: !!post.embed.quote,
+            langs: langPrefs.postLanguage,
+            logContext: 'Composer',
+          })
+          index++
+        }
+      }
+      if (thread.posts.length > 1) {
+        logEvent('thread:create', {
+          postCount: thread.posts.length,
+          isReply: !!replyTo,
+        })
+      }
+    }
+    if (postUri && !replyTo) {
+      emitPostCreated()
+    }
+    setLangPrefs.savePostLanguageToHistory()
+    if (initQuote) {
+      // We want to wait for the quote count to update before we call `onPost`, which will refetch data
+      whenAppViewReady(agent, initQuote.uri, res => {
+        const quotedThread = res.data.thread
+        if (
+          AppBskyFeedDefs.isThreadViewPost(quotedThread) &&
+          quotedThread.post.quoteCount !== initQuote.quoteCount
+        ) {
+          onPost?.(postUri)
+          onPostSuccess?.(postSuccessData)
+          return true
+        }
+        return false
+      })
+    } else {
+      onPost?.(postUri)
+      onPostSuccess?.(postSuccessData)
+    }
+    onClose()
+    Toast.show(
+      thread.posts.length > 1
+        ? _(msg`Your posts have been published`)
+        : replyTo
+          ? _(msg`Your reply has been published`)
+          : _(msg`Your post has been published`),
+    )
+  }, [
+    _,
+    agent,
+    thread,
+    canPost,
+    isPublishing,
+    langPrefs.postLanguage,
+    onClose,
+    onPost,
+    onPostSuccess,
+    initQuote,
+    replyTo,
+    setLangPrefs,
+    queryClient,
+  ])
+
+
+
+  
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
   const [channel, setChannel] = useState('Campus Talk');
@@ -85,7 +411,6 @@ export const Composer= ({
   const { display_name, username, avatar_url } = useUserStore();
 
   // Check if post can be submitted
-  const canPost = content.trim().length > 0;
 
   const handlePost = () => {
     if (canPost) {
@@ -366,6 +691,15 @@ export const Composer= ({
     </>
   );
 };
+
+
+function isEmptyPost(post: PostDraft) {
+  return (
+    post.text.trim().length === 0 &&
+    !post.embed.media &&
+    !post.embed.link
+  )
+}
 
 const styles = StyleSheet.create({
   container: {

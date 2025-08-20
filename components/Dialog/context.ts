@@ -7,12 +7,12 @@ import {
     useRef,
 } from 'react'
   
-  import { BottomSheetSnapPoint } from '@/components/bottom-sheet/src/BottomSheet.types'
-import {
+  import {
     type DialogContextProps,
     type DialogControlRefProps,
     type DialogOuterProps,
 } from '@/components/Dialog/types'
+import { BottomSheetSnapPoint } from '@/modules/bottom-sheet/src/BottomSheet.types'
 import { useDialogStateContext } from '@/state/dialogs'
   
   export const Context = createContext<DialogContextProps>({

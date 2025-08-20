@@ -1,36 +1,36 @@
 import { atoms as a } from '@/alf/atoms'
 import * as tokens from '@/alf/tokens'
-import { BottomSheet, BottomSheetSnapPoint } from '@/components/bottom-sheet'
-import {
-  type BottomSheetSnapPointChangeEvent,
-  type BottomSheetStateChangeEvent,
-} from '@/components/bottom-sheet/src/BottomSheet.types'
-import { type BottomSheetNativeComponent } from '@/components/bottom-sheet/src/BottomSheetNativeComponent'
 import { Context, useDialogContext } from '@/components/Dialog/context'
 import {
-  type DialogControlProps,
-  type DialogInnerProps,
-  type DialogOuterProps,
+    type DialogControlProps,
+    type DialogInnerProps,
+    type DialogOuterProps,
 } from '@/components/Dialog/types'
 import { useThemeColor } from '@/hooks/useThemeColor'
 import { useEnableKeyboardController } from '@/lib/hooks/useEnableKeyboardController'
 import { ScrollProvider } from '@/lib/ScrollContext'
+import { BottomSheet, BottomSheetSnapPoint } from '@/modules/bottom-sheet'
+import {
+    type BottomSheetSnapPointChangeEvent,
+    type BottomSheetStateChangeEvent,
+} from '@/modules/bottom-sheet/src/BottomSheet.types'
+import { type BottomSheetNativeComponent } from '@/modules/bottom-sheet/src/BottomSheetNativeComponent'
 import { isAndroid, isIOS } from '@/platform/detection'
 import { useDialogStateControlContext } from '@/state/dialogs'
 import { List, type ListMethods, type ListProps } from '@/view/com/util/List'
 import React, { useImperativeHandle } from 'react'
 import {
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Pressable,
-  type ScrollView,
-  type StyleProp,
-  View,
-  type ViewStyle
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    Pressable,
+    type ScrollView,
+    type StyleProp,
+    View,
+    type ViewStyle
 } from 'react-native'
 import {
-  KeyboardAwareScrollView,
-  useKeyboardHandler,
+    KeyboardAwareScrollView,
+    useKeyboardHandler,
 } from 'react-native-keyboard-controller'
 import { runOnJS } from 'react-native-reanimated'
 import { type ReanimatedScrollEvent } from 'react-native-reanimated/lib/typescript/hook/commonTypes'

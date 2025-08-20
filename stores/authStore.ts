@@ -1,4 +1,4 @@
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
@@ -10,7 +10,6 @@ import { useUserStore } from './userStore';
 
 interface AuthState {
   session: Session | null;
-  user: User | null;
   loading: boolean;
   error: Error | null;
   signInWithGoogle: () => Promise<void>;
@@ -31,7 +30,6 @@ export const useAuthStore = create<AuthState>((set) => {
 
   return {
     session: null,
-    user: null,
     loading: true,
     error: null,
     initialize: async () => {
@@ -46,10 +44,10 @@ export const useAuthStore = create<AuthState>((set) => {
         }
         console.log(`[${timestamp}] [AuthStore] Initial session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
         if (session) {
-          set({ session, user: session.user, loading: false, error: null });
+          set({ session, loading: false, error: null });
           console.log(`[${timestamp}] [AuthStore] Session and user set`, { userId: session.user?.id });
         } else {
-          set({ session: null, user: null, loading: false});
+          set({ session: null, loading: false});
           console.log(`[${timestamp}] [AuthStore] No session, cleared state`);
         }
       } catch (err) {
@@ -130,7 +128,7 @@ export const useAuthStore = create<AuthState>((set) => {
           throw error;
         }
         console.log(`[${timestamp}] [AuthStore] Sign-out successful`);
-        set({ session: null, user: null, loading: false, error: null });
+        set({ session: null, loading: false, error: null });
         console.log(`[${timestamp}] [AuthStore] Clearing user settings`);
         useUserStore.setState({ college: null, display_name: null, username: null, avatar_url: null });
       } catch (err) {
@@ -148,7 +146,7 @@ export const useAuthStore = create<AuthState>((set) => {
           throw error;
         }
         console.log(`[${timestamp}] [AuthStore] Session retrieved`, { session: session ? { userId: session.user?.id, email: session.user?.email } : null });
-        set({ session, user: session?.user ?? null, loading: false, error: null });
+        set({ session, loading: false, error: null });
         console.log(`[${timestamp}] [AuthStore] Session state updated`, { hasSession: !!session });
         return session;
       } catch (err) {
@@ -165,7 +163,7 @@ const { initialize } = useAuthStore.getState();
 supabase.auth.onAuthStateChange((event, session) => {
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
   console.log(`[${timestamp}] [AuthStore] Auth state changed`, { event, session: session ? { userId: session.user?.id, email: session.user?.email } : null });
-  useAuthStore.setState({ session, user: session?.user ?? null, loading: false, error: null });
+  useAuthStore.setState({ session, loading: false, error: null });
 });
 const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 console.log(`[${timestamp}] [AuthStore] Subscribing to auth state changes and initializing`);

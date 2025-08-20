@@ -2,6 +2,7 @@ import { AbortError } from '@/lib/async/cancelable';
 import { compressVideo } from '@/lib/media/video/compress';
 import { VideoTooLargeError } from '@/lib/media/video/errors';
 import { type CompressedVideo } from '@/lib/media/video/types';
+import { type I18n } from '@lingui/core';
 import { type SupabaseClient } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
 import { type ImagePickerAsset } from 'expo-image-picker';
@@ -138,8 +139,6 @@ export function videoReducer(state: VideoState, action: VideoAction): VideoState
         return { ...state, progress: action.progress };
       }
       break;
-    case 'update_alt_text':
-      return { ...state, altText: action.altText };
     case 'update_captions':
       return { ...state, captions: action.updater(state.captions) };
     case 'compressing_to_uploading':
@@ -236,6 +235,8 @@ export async function processVideo(
   supabase: SupabaseClient,
   userId: string,
   signal: AbortSignal,
+  _: I18n['_'],
+
 ) {
   let video: CompressedVideo | undefined;
   try {

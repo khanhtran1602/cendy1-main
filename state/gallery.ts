@@ -16,45 +16,45 @@ import { POST_IMG_MAX } from '@/lib/constants'
 import { getImageDim } from '@/lib/media/manip'
 import { openCropper } from '@/lib/media/picker'
 import { isNative } from '@/platform/detection'
-  export type PickerImage = ImageMeta & {
+
+export type PickerImage = ImageMeta & {
     size: number
   }
-  export function getDataUriSize(uri: string): number {
+export function getDataUriSize(uri: string): number {
     return Math.round((uri.length * 3) / 4)
   }
-  export type ImageTransformation = {
+export type ImageTransformation = {
     crop?: ActionCrop['crop']
   }
   
-  export type ImageMeta = {
+export type ImageMeta = {
     path: string
     width: number
     height: number
     mime: string
   }
   
-  export type ImageSource = ImageMeta & {
+export type ImageSource = ImageMeta & {
     id: string
   }
   
-  type ComposerImageBase = {
+type ComposerImageBase = {
     alt: string
     source: ImageSource
   }
-  type ComposerImageWithoutTransformation = ComposerImageBase & {
+export type ComposerImageWithoutTransformation = ComposerImageBase & {
     transformed?: undefined
     manips?: undefined
   }
-  type ComposerImageWithTransformation = ComposerImageBase & {
+export type ComposerImageWithTransformation = ComposerImageBase & {
     transformed: ImageMeta
     manips?: ImageTransformation
   }
-  
-  export type ComposerImage =
+export type ComposerImage =
     | ComposerImageWithoutTransformation
     | ComposerImageWithTransformation
   
-  let _imageCacheDirectory: string
+let _imageCacheDirectory: string
   
   function getImageCacheDirectory(): string | null {
     if (isNative) {

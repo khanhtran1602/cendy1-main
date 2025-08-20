@@ -1,8 +1,8 @@
 import React from 'react'
 
-import { BottomSheetNativeComponent } from '@/components/bottom-sheet/src/BottomSheetNativeComponent'
 import { DialogControlRefProps } from '@/components/Dialog/types'
 import { Provider as GlobalDialogsProvider } from '@/components/dialogs/Context'
+import { BottomSheetNativeComponent } from '@/modules/bottom-sheet/src/BottomSheetNativeComponent'
 
 interface IDialogContext {
   /**

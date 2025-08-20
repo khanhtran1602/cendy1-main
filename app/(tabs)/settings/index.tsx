@@ -11,11 +11,16 @@ import {
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useAuthStore } from '@/stores/authStore';
+import { t } from 'i18next';
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
+
 export default function SettingsScreen() {
   const [open, setOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('home');
+  const { signOut } = useAuthStore();
+  const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
   const textColor = useThemeColor({}, 'text');
   const mutedColor = useThemeColor({}, 'textMuted');
@@ -35,6 +40,17 @@ export default function SettingsScreen() {
     setOpen(false);
   };
 
+  const handleSignOut = async () => {
+    console.log(`[${timestamp}] [SettingsScreen] Sign-out button pressed`);
+    try {
+      await signOut();
+      console.log(`[${timestamp}] [SettingsScreen] Sign-out initiated, waiting for session state change`);
+    } catch (err) {
+      console.log(`[${timestamp}] [SettingsScreen] Sign-out error`, { error: (err as Error).message });
+      Alert.alert(t('error.title'), t('error.signOut'));
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={setOpen} side='left'>
       <SheetTrigger>
@@ -50,7 +66,6 @@ export default function SettingsScreen() {
         <View style={styles.navigationContainer}>
           {navigationItems.map((item) => {
             const isActive = activeItem === item.id;
-
             return (
               <TouchableOpacity
                 key={item.id}
@@ -82,6 +97,13 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             );
           })}
+          <Button
+            label={t('home.signOut')}
+            onPress={() => {
+              console.log(`[${timestamp}] [SettingsScreen] Sign-out button pressed`);
+              handleSignOut();
+            }}
+          />
         </View>
       </SheetContent>
     </Sheet>
